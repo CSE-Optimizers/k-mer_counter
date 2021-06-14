@@ -1,0 +1,22 @@
+CC = mpiCC
+# CPPFLAGS = -pg
+CXXFLAGS = -std=c++11
+
+# Path to sparsehash src
+USER_LIBS = -I /home/budvin/parallel_counter_MPI_1/sparsehash-sparsehash-2.0.4/src
+
+
+main: main.o extractor.o com.o kmer_dump.o
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o kmer_counter.out main.o extractor.o com.o kmer_dump.o $(USER_LIBS)
+
+main.o: main.cpp extractor.hpp com.hpp kmer_dump.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c main.cpp $(USER_LIBS)
+
+extractor.o: extractor.cpp extractor.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c extractor.cpp $(USER_LIBS)
+
+com.o: com.cpp com.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c com.cpp $(USER_LIBS)
+
+kmer_dump.o: kmer_dump.cpp kmer_dump.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c kmer_dump.cpp $(USER_LIBS)
