@@ -16,9 +16,9 @@ using std::string;
 #define DIRECTORY_SEP '/'
 #define MAX_PARTITIONS 10
 
-void mergeHashmap(dense_hash_map<size_t, size_t> newHashMap, int partition, string base_path);
-void mergeArrayToHashmap(size_t *dataArray, int dataArrayLength, int partition, string base_path);
-void dumpHashmap(dense_hash_map<size_t, size_t> hashMap, int partition, int partitionFileCounts[], string base_path);
-void loadHashMap(dense_hash_map<std::size_t, std::size_t> *hashMap, int partition, string base_path);
-void saveHashMap(dense_hash_map<std::size_t, std::size_t> *hashMap, int partition, string base_path);
+void mergeHashmap(dense_hash_map<uint64_t, uint64_t> newHashMap, int partition, string base_path);
+void mergeArrayToHashmap(uint64_t *dataArray, int dataArrayLength, int partition, string base_path);
+void dumpHashmap(dense_hash_map<uint64_t, uint64_t> hashMap, int partition, int partitionFileCounts[], string base_path);
+void loadHashMap(dense_hash_map<uint64_t, uint64_t> *hashMap, int partition, string base_path);
+void saveHashMap(dense_hash_map<uint64_t, uint64_t> *hashMap, int partition, string base_path);
 #endif

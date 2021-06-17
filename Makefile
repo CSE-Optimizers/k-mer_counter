@@ -1,5 +1,5 @@
 CC = mpiCC
-# CPPFLAGS = -pg
+CPPFLAGS = -Wall
 CXXFLAGS = -std=c++11
 
 main: main.o extractor.o com.o kmer_dump.o

@@ -4,7 +4,7 @@ using std::to_string;
 
 struct StringToIntSerializer
 {
-  bool operator()(FILE *fp, const std::pair<const size_t, size_t> &value) const
+  bool operator()(FILE *fp, const std::pair<const uint64_t, uint64_t> &value) const
   {
     // Write the key.
     if (fwrite(&value.first, sizeof(value.first), 1, fp) != 1)
@@ -14,25 +14,25 @@ struct StringToIntSerializer
       return false;
     return true;
   }
-  bool operator()(FILE *fp, std::pair<const size_t, size_t> *value) const
+  bool operator()(FILE *fp, std::pair<const uint64_t, uint64_t> *value) const
   {
     // Read the key.  Note the need for const_cast to get around
     // the fact hash_map keys are always const.
-    if (fread(const_cast<size_t *>(&value->first), sizeof(value->first), 1, fp) != 1)
+    if (fread(const_cast<uint64_t *>(&value->first), sizeof(value->first), 1, fp) != 1)
       return false;
     // Read the value.
-    if (fread(const_cast<size_t *>(&value->second), sizeof(value->second), 1, fp) != 1)
+    if (fread(const_cast<uint64_t *>(&value->second), sizeof(value->second), 1, fp) != 1)
       return false;
     return true;
   }
 };
 
-void mergeHashmap(dense_hash_map<size_t, size_t> newHashMap, int partition, string base_path)
+void mergeHashmap(dense_hash_map<uint64_t, uint64_t> newHashMap, int partition, string base_path)
 {
   // Assuming path exist
   string file_path = base_path + DIRECTORY_SEP + std::to_string(partition) + ".data";
   FILE *fp = fopen(file_path.c_str(), "r");
-  dense_hash_map<size_t, size_t> oldHashMap;
+  dense_hash_map<uint64_t, uint64_t> oldHashMap;
 
   if (fp)
   {
@@ -40,7 +40,7 @@ void mergeHashmap(dense_hash_map<size_t, size_t> newHashMap, int partition, stri
     fclose(fp);
   }
 
-  google::dense_hash_map<size_t, size_t>::iterator it = newHashMap.begin();
+  google::dense_hash_map<uint64_t, uint64_t>::iterator it = newHashMap.begin();
 
   for (; it != newHashMap.end(); ++it)
   {
@@ -64,12 +64,12 @@ void mergeHashmap(dense_hash_map<size_t, size_t> newHashMap, int partition, stri
   fclose(fp);
 }
 
-void mergeArrayToHashmap(size_t *dataArray, int dataArrayLength, int partition, string base_path)
+void mergeArrayToHashmap(uint64_t *dataArray, int dataArrayLength, int partition, string base_path)
 {
   // Assuming path exist
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";
   FILE *fp = fopen(file_path.c_str(), "r");
-  dense_hash_map<size_t, size_t> oldHashMap;
+  dense_hash_map<uint64_t, uint64_t> oldHashMap;
   oldHashMap.set_empty_key(-1);
 
   if (fp)
@@ -97,7 +97,7 @@ void mergeArrayToHashmap(size_t *dataArray, int dataArrayLength, int partition, 
   oldHashMap.clear();
 }
 
-void dumpHashmap(dense_hash_map<size_t, size_t> hashMap, int partition, int partitionFileCounts[], string base_path)
+void dumpHashmap(dense_hash_map<uint64_t, uint64_t> hashMap, int partition, int partitionFileCounts[], string base_path)
 {
   // Assumes file_path exist
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + DIRECTORY_SEP + to_string(partitionFileCounts[partition]++);
@@ -107,7 +107,7 @@ void dumpHashmap(dense_hash_map<size_t, size_t> hashMap, int partition, int part
   fclose(fp);
 }
 
-void loadHashMap(dense_hash_map<std::size_t, std::size_t> *hashMap, int partition, string base_path)
+void loadHashMap(dense_hash_map<uint64_t, uint64_t> *hashMap, int partition, string base_path)
 {
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";
   FILE *fp = fopen(file_path.c_str(), "r");
@@ -122,7 +122,7 @@ void loadHashMap(dense_hash_map<std::size_t, std::size_t> *hashMap, int partitio
 /*
   Overwrites any existing file.
   */
-void saveHashMap(dense_hash_map<std::size_t, std::size_t> *hashMap, int partition, string base_path)
+void saveHashMap(dense_hash_map<uint64_t, uint64_t> *hashMap, int partition, string base_path)
 {
 
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";

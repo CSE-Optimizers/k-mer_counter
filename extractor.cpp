@@ -1,41 +1,37 @@
 #include "extractor.hpp"
 
-static inline __attribute__((always_inline)) size_t getCharacterEncoding(const char character)
+static inline __attribute__((always_inline)) uint64_t getCharacterEncoding(const char character)
 {
   switch (character)
   {
   case 'A':
-    return 0;
+    return (uint64_t)0;
     break;
   case 'C':
-    return 1;
+    return (uint64_t)1;
     break;
   case 'G':
-    return 2;
+    return (uint64_t)2;
     break;
   case 'T':
-    return 3;
+    return (uint64_t)3;
     break;
   default:
-    return 4;
+    return (uint64_t)4;
     break;
   }
 }
 
-
-
-
-void countKmersFromBuffer(std::size_t &kmer_size, char *read_buffer, google::dense_hash_map<std::size_t, std::size_t> *counts)
+void countKmersFromBuffer(int &kmer_size, char *read_buffer, google::dense_hash_map<uint64_t, uint64_t> *counts)
 {
   size_t index = 0;
-  size_t read_index = 0;
-  size_t calculatedCounterIndex = 0;
-  size_t characterEncoding = 0;
 
-  size_t bit_clear_mask = ~(3 << (kmer_size * 2));
-  size_t invalid_check_mask = 1 << 2;
-  size_t kmer_filled_length = 0;
-  bool flag;
+  uint64_t calculatedCounterIndex = 0;
+  uint64_t characterEncoding = 0;
+
+  uint64_t bit_clear_mask = ~(((uint64_t)3) << (kmer_size * 2));
+  uint64_t invalid_check_mask = ((uint64_t)1) << 2;
+  int kmer_filled_length = 0;
 
   while (read_buffer[index] != 0 && read_buffer[index] != '\n')
   {
