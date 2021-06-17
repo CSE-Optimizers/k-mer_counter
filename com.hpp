@@ -4,7 +4,6 @@
 #include <sparsehash/dense_hash_map>
 #include <stddef.h>
 
-
-void copyToComOutBuffer(std::size_t &current_size, size_t* buffer, google::dense_hash_map<std::size_t, std::size_t> *counts);
+void copyToComOutBuffer(std::size_t &current_size, uint64_t *buffer, google::dense_hash_map<uint64_t, uint64_t> *counts);
 
 #endif

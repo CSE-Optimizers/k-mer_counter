@@ -21,11 +21,11 @@
 #define HASH_MAP_MAX_SIZE 0x1000000
 #define DUMP_SIZE 10
 
-static inline __attribute__((always_inline)) void getKmerFromIndex(const size_t kmer_size, const size_t index, char *out_buffer)
+static inline __attribute__((always_inline)) void getKmerFromIndex(const int kmer_size, const uint64_t index, char *out_buffer)
 {
-  size_t character_mask = ((size_t)3) << ((kmer_size - 1) * 2);
-  size_t character_encoding = 0;
-  for (size_t i = 0; i < kmer_size; i++)
+  uint64_t character_mask = ((uint64_t)3) << ((kmer_size - 1) * 2);
+  uint64_t character_encoding = 0;
+  for (int i = 0; i < kmer_size; i++)
   {
     character_encoding = (index & character_mask) >> ((kmer_size - i - 1) * 2);
     switch (character_encoding)
@@ -59,17 +59,17 @@ static inline __attribute__((always_inline)) void getKmerFromIndex(const size_t 
 int main(int argc, char *argv[])
 {
 
-  size_t kmer_size;
-  int reads_n;
+  int kmer_size;
+  size_t reads_n;
   char read_buffer[READ_BUFFER_SIZE];
-  google::dense_hash_map<size_t, size_t> counts;
+  google::dense_hash_map<uint64_t, uint64_t> counts;
 
   int num_tasks, rank;
-  int my_line_counter;
-  int my_offset_data[2];
-  size_t *com_out_buffer;
+  uint64_t my_line_counter;
+  uint64_t my_offset_data[2];
+  uint64_t *com_out_buffer;
   MPI_Request sending_request;
-  int com_out_counter = 0;
+  size_t com_out_counter = 0;
 
   const char *file_name = argv[1];
   kmer_size = atoi(argv[2]);
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  int offset_data[num_tasks][2]; //offset (in lines) and no of reads for this process
+  uint64_t offset_data[num_tasks][2]; //offset (in lines) and no of reads for this process
 
   std::cout << "total processes = " << num_tasks << std::endl;
   std::cout << "rank = " << rank << std::endl;
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     //   while (0 == i)
     //     sleep(5);
     // }
-    size_t total_line_count = 0;
+    uint64_t total_line_count = 0;
     memset(read_buffer, 0, READ_BUFFER_SIZE * (sizeof read_buffer[0]));
     FILE *input_file;
     input_file = fopen(file_name, "r");
@@ -101,12 +101,12 @@ int main(int argc, char *argv[])
     fclose(input_file);
 
     std::cout << "Total number of lines in input file = " << total_line_count << std::endl;
-    const size_t reads_per_process = total_line_count / (4 * (num_tasks - 1));
-    const size_t lines_per_process = reads_per_process * 4;
+    const uint64_t reads_per_process = total_line_count / (4 * (num_tasks - 1));
+    const uint64_t lines_per_process = reads_per_process * 4;
     offset_data[0][0] = 0;
     offset_data[0][1] = 0;
 
-    for (size_t process_i = 1; process_i < num_tasks; process_i++)
+    for (int process_i = 1; process_i < num_tasks; process_i++)
     {
       offset_data[process_i][0] = (process_i - 1) * lines_per_process;
       offset_data[process_i][1] = reads_per_process;
@@ -114,8 +114,8 @@ int main(int argc, char *argv[])
 
     offset_data[num_tasks - 1][1] = (total_line_count - ((num_tasks - 2) * lines_per_process)) / 4;
   }
-  MPI_Scatter(offset_data, 2, MPI_INT, my_offset_data, 2,
-              MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Scatter(offset_data, 2, MPI_UINT64_T, my_offset_data, 2,
+              MPI_UINT64_T, 0, MPI_COMM_WORLD);
 
   if (rank > 0)
   {
@@ -127,8 +127,8 @@ int main(int argc, char *argv[])
     //     sleep(5);
     // }
 
-    int my_offset = my_offset_data[0];
-    int my_allocated_lines_n = my_offset_data[1] * 4;
+    uint64_t my_offset = my_offset_data[0];
+    uint64_t my_allocated_lines_n = my_offset_data[1] * 4;
     int tag = 0;
     clock_t t;
 
@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
           size_t current_size = counts.size();
 
           // contiguous memory segment is needed for 2d array
-          com_out_buffer = (size_t *)malloc(2 * current_size * sizeof(size_t));
+          com_out_buffer = (uint64_t *)malloc(2 * current_size * sizeof(uint64_t));
 
           copyToComOutBuffer(current_size, com_out_buffer, &counts);
           counts.clear();
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
     {
       size_t current_size = counts.size();
 
-      com_out_buffer = (size_t *)malloc(2 * current_size * sizeof(size_t));
+      com_out_buffer = (uint64_t *)malloc(2 * current_size * sizeof(uint64_t));
 
       copyToComOutBuffer(current_size, com_out_buffer, &counts);
       counts.clear();
@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
     }
 
     //send an empty value to signal that this processes has finished counting
-    com_out_buffer = (size_t *)malloc(2 * sizeof(size_t));
+    com_out_buffer = (uint64_t *)malloc(2 * sizeof(uint64_t));
     com_out_buffer[0] = 0;
     com_out_buffer[1] = 0; //empty value
 
@@ -254,10 +254,10 @@ int main(int argc, char *argv[])
   {
     int receiving_size;
     MPI_Status receiving_status;
-    size_t *com_in_buffer;
+    uint64_t *com_in_buffer;
     int source;
     int finished_tasks_n = 0;
-    google::dense_hash_map<size_t, size_t> final_counts;
+    google::dense_hash_map<uint64_t, uint64_t> final_counts;
     final_counts.set_empty_key(-1);
 
     while (finished_tasks_n < num_tasks - 1)
@@ -267,7 +267,7 @@ int main(int argc, char *argv[])
       MPI_Get_count(&receiving_status, MPI_UINT64_T, &receiving_size);
       std::cout << "receiving size = " << receiving_size << " from " << source << std::endl;
 
-      com_in_buffer = (size_t *)malloc(receiving_size * sizeof(size_t));
+      com_in_buffer = (uint64_t *)malloc(receiving_size * sizeof(uint64_t));
 
       MPI_Recv(com_in_buffer, receiving_size, MPI_UINT64_T, source, 0, MPI_COMM_WORLD, &receiving_status);
       std::cout << "Process " << rank << " received from " << source << "\tdata size = " << receiving_size << std::endl;
@@ -303,11 +303,11 @@ int main(int argc, char *argv[])
     saveHashMap(&final_counts, 1, "data");
     final_counts.clear();
 
-    google::dense_hash_map<size_t, size_t> loaded_counts;
+    google::dense_hash_map<uint64_t, uint64_t> loaded_counts;
     loaded_counts.set_empty_key(-1);
 
     loadHashMap(&loaded_counts, 1, "data");
-    google::dense_hash_map<size_t, size_t>::iterator loaded_counts_iterator = loaded_counts.begin();
+    google::dense_hash_map<uint64_t, uint64_t>::iterator loaded_counts_iterator = loaded_counts.begin();
 
     char *kmer = (char *)calloc(kmer_size + 1, sizeof(char));
     std::cout << "\nFinal Counts\n===================\n";
