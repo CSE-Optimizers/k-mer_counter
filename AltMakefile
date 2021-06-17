@@ -3,7 +3,7 @@ CPPFLAGS = -Wall
 CXXFLAGS = -std=c++11
 
 # Path to sparsehash src
-USER_LIBS = -I /home/budvin/parallel_counter_MPI_1/sparsehash-sparsehash-2.0.4/src
+USER_LIBS = -I /home/budvin/sparsehash/sparsehash-sparsehash-2.0.4/src
 
 
 main: main.o extractor.o com.o kmer_dump.o
