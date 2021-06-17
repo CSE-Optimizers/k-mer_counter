@@ -1,5 +1,5 @@
 CC = mpiCC
-# CPPFLAGS = -pg
+CPPFLAGS = -Wall
 CXXFLAGS = -std=c++11
 
 # Path to sparsehash src
