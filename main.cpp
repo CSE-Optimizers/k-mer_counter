@@ -309,17 +309,11 @@ int main(int argc, char *argv[])
 
     dump_file = fopen("dump.txt", "w");
     char *kmer = (char *)calloc(kmer_size + 1, sizeof(char));
-    google::dense_hash_map<uint64_t, uint64_t>::iterator final_counts_iterator = final_counts.begin();
-    size_t dump_size = DUMP_SIZE;
-
-    for (; final_counts_iterator != final_counts.end(); ++final_counts_iterator)
+    uint64_t dump_size = std::min((uint64_t)DUMP_SIZE, ((uint64_t)2) << (2 * kmer_size - 1));
+    for (uint64_t kmer_i = 0; kmer_i < dump_size; kmer_i++)
     {
-      getKmerFromIndex(kmer_size, final_counts_iterator->first, kmer);
-      fprintf(dump_file, "%s\t%lu\n", kmer, final_counts_iterator->second);
-      if (!--dump_size)
-      {
-        break;
-      }
+      getKmerFromIndex(kmer_size, kmer_i, kmer);
+      fprintf(dump_file, "%s\t%lu\n", kmer, final_counts[kmer_i]);
     }
     fclose(dump_file);
 
