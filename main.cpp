@@ -301,27 +301,49 @@ int main(int argc, char *argv[])
       free(com_in_buffer);
     }
     saveHashMap(&final_counts, 1, "data");
-    final_counts.clear();
 
-    google::dense_hash_map<uint64_t, uint64_t> loaded_counts;
-    loaded_counts.set_empty_key(-1);
+    /* 
+    Writing kmer dump to a file
+    */
+    FILE *dump_file;
 
-    loadHashMap(&loaded_counts, 1, "data");
-    google::dense_hash_map<uint64_t, uint64_t>::iterator loaded_counts_iterator = loaded_counts.begin();
-
+    dump_file = fopen("dump.txt", "w");
     char *kmer = (char *)calloc(kmer_size + 1, sizeof(char));
-    std::cout << "\nFinal Counts\n===================\n";
+    google::dense_hash_map<uint64_t, uint64_t>::iterator final_counts_iterator = final_counts.begin();
     size_t dump_size = DUMP_SIZE;
-    for (; loaded_counts_iterator != loaded_counts.end(); ++loaded_counts_iterator)
+
+    for (; final_counts_iterator != final_counts.end(); ++final_counts_iterator)
     {
-      getKmerFromIndex(kmer_size, loaded_counts_iterator->first, kmer);
-      std::cout << kmer << " " << loaded_counts_iterator->second << std::endl;
+      getKmerFromIndex(kmer_size, final_counts_iterator->first, kmer);
+      fprintf(dump_file, "%s\t%lu\n", kmer, final_counts_iterator->second);
       if (!--dump_size)
       {
         break;
       }
     }
-    loaded_counts.clear();
+    fclose(dump_file);
+
+    final_counts.clear();
+
+    // google::dense_hash_map<uint64_t, uint64_t> loaded_counts;
+    // loaded_counts.set_empty_key(-1);
+
+    // loadHashMap(&loaded_counts, 1, "data");
+    // google::dense_hash_map<uint64_t, uint64_t>::iterator loaded_counts_iterator = loaded_counts.begin();
+
+    // char *kmer = (char *)calloc(kmer_size + 1, sizeof(char));
+    // std::cout << "\nFinal Counts\n===================\n";
+    // size_t dump_size = DUMP_SIZE;
+    // for (; loaded_counts_iterator != loaded_counts.end(); ++loaded_counts_iterator)
+    // {
+    //   getKmerFromIndex(kmer_size, loaded_counts_iterator->first, kmer);
+    //   std::cout << kmer << " " << loaded_counts_iterator->second << std::endl;
+    //   if (!--dump_size)
+    //   {
+    //     break;
+    //   }
+    // }
+    // loaded_counts.clear();
 
     // size_t *com_in_buffer;
     // int receiving_size;
