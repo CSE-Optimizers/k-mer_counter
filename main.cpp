@@ -16,8 +16,9 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <time.h>
+#include <sys/stat.h>
 
-#define READ_BUFFER_SIZE 2000
+#define READ_BUFFER_SIZE 0x200000
 #define HASH_MAP_MAX_SIZE 0x1000000
 #define DUMP_SIZE 10
 
@@ -60,12 +61,10 @@ int main(int argc, char *argv[])
 {
 
   int kmer_size;
-  size_t reads_n;
-  char read_buffer[READ_BUFFER_SIZE];
+  char read_buffer[READ_BUFFER_SIZE + 1] = {0};
   google::dense_hash_map<uint64_t, uint64_t> counts;
 
   int num_tasks, rank;
-  uint64_t my_line_counter;
   uint64_t my_offset_data[2];
   uint64_t *com_out_buffer;
   MPI_Request sending_request;
@@ -78,7 +77,7 @@ int main(int argc, char *argv[])
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  uint64_t offset_data[num_tasks][2]; //offset (in lines) and no of reads for this process
+  uint64_t offset_data[num_tasks][2]; //offset and allocated size for this process (in bytes)
 
   std::cout << "total processes = " << num_tasks << std::endl;
   std::cout << "rank = " << rank << std::endl;
@@ -90,29 +89,30 @@ int main(int argc, char *argv[])
     //   while (0 == i)
     //     sleep(5);
     // }
-    uint64_t total_line_count = 0;
-    memset(read_buffer, 0, READ_BUFFER_SIZE * (sizeof read_buffer[0]));
-    FILE *input_file;
-    input_file = fopen(file_name, "r");
-    while (fgets(read_buffer, READ_BUFFER_SIZE, input_file) != NULL)
-    {
-      total_line_count++;
-    }
-    fclose(input_file);
 
-    std::cout << "Total number of lines in input file = " << total_line_count << std::endl;
-    const uint64_t reads_per_process = total_line_count / (4 * (num_tasks - 1));
-    const uint64_t lines_per_process = reads_per_process * 4;
+    // Calculating total file size
+    struct stat data_file_stats;
+    if (stat(file_name, &data_file_stats) != 0)
+    {
+      std::cerr << "Error when calculating file size." << std::endl;
+      exit(EXIT_FAILURE);
+    }
+
+    const size_t total_size = data_file_stats.st_size;
+    std::cout << "Total file size in bytes = " << total_size << std::endl;
+    const uint64_t chunk_size = total_size / (num_tasks - 1);
+
+    // Dummy offset data for rank=0 process since that process is not reading the file
     offset_data[0][0] = 0;
     offset_data[0][1] = 0;
 
     for (int process_i = 1; process_i < num_tasks; process_i++)
     {
-      offset_data[process_i][0] = (process_i - 1) * lines_per_process;
-      offset_data[process_i][1] = reads_per_process;
+      offset_data[process_i][0] = (process_i - 1) * chunk_size;
+      offset_data[process_i][1] = chunk_size;
     }
 
-    offset_data[num_tasks - 1][1] = (total_line_count - ((num_tasks - 2) * lines_per_process)) / 4;
+    offset_data[num_tasks - 1][1] = (total_size - ((num_tasks - 2) * chunk_size));
   }
   MPI_Scatter(offset_data, 2, MPI_UINT64_T, my_offset_data, 2,
               MPI_UINT64_T, 0, MPI_COMM_WORLD);
@@ -127,81 +127,121 @@ int main(int argc, char *argv[])
     //     sleep(5);
     // }
 
-    uint64_t my_offset = my_offset_data[0];
-    uint64_t my_allocated_lines_n = my_offset_data[1] * 4;
+    const uint64_t my_offset = my_offset_data[0];
+    uint64_t my_revised_offset = my_offset;
+    const uint64_t my_allocated_size = my_offset_data[1];
     int tag = 0;
     clock_t t;
 
-    std::cout << "my (" << rank << ")\t offset = " << my_offset << "\t lines = " << my_allocated_lines_n << std::endl;
+    std::cout << "my (" << rank << ")\t offset = " << my_offset << "\t chunk_size = " << my_allocated_size << std::endl;
 
     memset(read_buffer, 0, READ_BUFFER_SIZE * (sizeof read_buffer[0]));
-    my_line_counter = 0;
-    reads_n = 0;
+
     FILE *file = fopen(file_name, "r");
-    while (fgets(read_buffer, READ_BUFFER_SIZE, file) && my_line_counter <= my_offset + my_allocated_lines_n)
+
+    if (my_offset > 0)
     {
-      if (my_offset > 0 && my_line_counter < my_offset)
+      fseek(file, my_offset - 1, SEEK_SET);
+      char temp_char = fgetc(file);
+      if (temp_char != '\n')
       {
-        my_line_counter++;
-        continue;
+        // now were are in the middle of a line
+        // just do fgets and ignore the current line.
+        // that line will be processed by the previous rank process.
+        fgets(read_buffer, READ_BUFFER_SIZE, file);
+        cout << "ignored first line = \"" << read_buffer << "\"" << endl;
+        my_revised_offset = ftell(file);
       }
-
-      if (read_buffer[READ_BUFFER_SIZE - 2] != 0 && read_buffer[READ_BUFFER_SIZE - 2] != '\n')
-      {
-        std::cerr << "Buffer overflow when reading lines" << std::endl;
-        exit(EXIT_FAILURE);
-      }
-      if (!((my_line_counter - 1) % 4))
-      {
-        reads_n++;
-        countKmersFromBuffer(kmer_size, read_buffer, &counts);
-        // std::cout << "rank-" << rank << "\t line-" << my_line_counter << " " << read_buffer;
-        // std::cout << rank << " - " << counts.size() << std::endl;
-
-        if (counts.size() >= HASH_MAP_MAX_SIZE)
-        {
-          // If sent previously, wait for that sending to complete
-          if (com_out_counter > 0)
-          {
-            std::cout << rank << " waiting for send complete\n";
-            t = clock();
-            MPI_Wait(&sending_request, MPI_STATUS_IGNORE);
-            std::cout << "process " << rank << " waited " << ((double)(clock() - t)) / CLOCKS_PER_SEC << "seconds\n";
-            free(com_out_buffer);
-          }
-
-          size_t current_size = counts.size();
-
-          // contiguous memory segment is needed for 2d array
-          com_out_buffer = (uint64_t *)malloc(2 * current_size * sizeof(uint64_t));
-
-          copyToComOutBuffer(current_size, com_out_buffer, &counts);
-          counts.clear();
-
-          // char *kmer = (char *)calloc(kmer_size + 1, sizeof(char));
-          // for (size_t com_out_buffer_i = 0; com_out_buffer_i < 30; com_out_buffer_i++)
-          // {
-          //   getKmerFromIndex(kmer_size, com_out_buffer[2 * com_out_buffer_i], kmer);
-          //   std::cout << kmer << " -- " << com_out_buffer[2 * com_out_buffer_i + 1] << std::endl;
-          // }
-
-          //non blocking send
-          MPI_Isend(com_out_buffer, current_size * 2, MPI_UINT64_T, 0, tag, MPI_COMM_WORLD, &sending_request);
-
-          /* if blocking send, use following */
-          // MPI_Send(com_out_buffer, current_size * 2, MPI_UINT64_T, 0, tag, MPI_COMM_WORLD);
-
-          com_out_counter++;
-
-          std::cout << rank << " sending data to 0 \t size = " << current_size * 2 << std::endl;
-          std::cout << rank << " progress = " << (my_line_counter - my_offset) / ((double)my_allocated_lines_n) << std::endl;
-          // tag++;
-        }
-      }
-      memset(read_buffer, 0, READ_BUFFER_SIZE * (sizeof read_buffer[0]));
-
-      my_line_counter++;
     }
+
+    enum LineType first_line_type = getLineType(file);
+
+    //return to revised starting point
+    fseek(file, my_revised_offset, SEEK_SET);
+
+    memset(read_buffer, 0, READ_BUFFER_SIZE + 1);
+
+    // adjust range size due to ignoring the first line
+    const size_t remaining = my_allocated_size - (my_revised_offset - my_offset);
+    size_t processed = 0;
+    size_t current_chunk_size = 0;
+
+    while (processed <= remaining && !feof(file))
+    {
+
+      current_chunk_size = fread(read_buffer, sizeof(char), READ_BUFFER_SIZE, file);
+
+      countKmersFromBuffer(
+          kmer_size,
+          read_buffer,
+          READ_BUFFER_SIZE,
+          (processed + current_chunk_size) <= remaining ? current_chunk_size : remaining - processed,
+          first_line_type, true, &counts);
+      processed += current_chunk_size;
+      memset(read_buffer, 0, READ_BUFFER_SIZE + 1);
+
+      if (counts.size() >= HASH_MAP_MAX_SIZE)
+      {
+        // If sent previously, wait for that sending to complete
+        if (com_out_counter > 0)
+        {
+          std::cout << rank << " waiting for send complete\n";
+          t = clock();
+          MPI_Wait(&sending_request, MPI_STATUS_IGNORE);
+          std::cout << "process " << rank << " waited " << ((double)(clock() - t)) / CLOCKS_PER_SEC << "seconds\n";
+          free(com_out_buffer);
+        }
+
+        size_t current_size = counts.size();
+
+        // contiguous memory segment is needed for 2d array
+        com_out_buffer = (uint64_t *)malloc(2 * current_size * sizeof(uint64_t));
+
+        copyToComOutBuffer(current_size, com_out_buffer, &counts);
+        counts.clear();
+
+        // char *kmer = (char *)calloc(kmer_size + 1, sizeof(char));
+        // for (size_t com_out_buffer_i = 0; com_out_buffer_i < 30; com_out_buffer_i++)
+        // {
+        //   getKmerFromIndex(kmer_size, com_out_buffer[2 * com_out_buffer_i], kmer);
+        //   std::cout << kmer << " -- " << com_out_buffer[2 * com_out_buffer_i + 1] << std::endl;
+        // }
+
+        //non blocking send
+        MPI_Isend(com_out_buffer, current_size * 2, MPI_UINT64_T, 0, tag, MPI_COMM_WORLD, &sending_request);
+
+        /* if blocking send, use following */
+        // MPI_Send(com_out_buffer, current_size * 2, MPI_UINT64_T, 0, tag, MPI_COMM_WORLD);
+
+        com_out_counter++;
+
+        std::cout << rank << " sending data to 0 \t size = " << current_size * 2 << std::endl;
+        std::cout << rank << " progress = " << (ftell(file) - my_offset) / ((double)my_allocated_size) << std::endl;
+        // tag++;
+      }
+    }
+
+    // return to one character before the end of allocated range
+    fseek(file, my_offset + my_allocated_size - 1, SEEK_SET);
+    char temp_char = 0;
+    temp_char = fgetc(file);
+    if (temp_char != '\n')
+    {
+      // we are in the middle of a line
+      // process the remaining part of the line
+
+      // cout << "\nrading the remaining part of the last line \n";
+      fgets(read_buffer, READ_BUFFER_SIZE, file);
+      countKmersFromBuffer(
+          kmer_size,
+          read_buffer,
+          READ_BUFFER_SIZE,
+          strlen(read_buffer),
+          first_line_type, true, &counts);
+      memset(read_buffer, 0, READ_BUFFER_SIZE + 1);
+    }
+
+    cout << "\n\n===============\nfinal position = " << ftell(file) << std::endl;
 
     // If sent previously, wait for that sending to complete
     if (com_out_counter > 0)
