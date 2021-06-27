@@ -111,8 +111,8 @@ void countKmersFromBuffer(
   static uint64_t kmer_filled_length = 0;
   uint64_t current_character_encoding = 0;
 
-  const uint64_t bit_clear_mask = ~(3 << (kmer_size * 2));
-  const uint64_t invalid_check_mask = 1 << 2;
+  const uint64_t bit_clear_mask = ~(((uint64_t)3) << (kmer_size * 2));
+  const uint64_t invalid_check_mask = ((uint64_t)1) << 2;
 
   for (uint64_t buffer_i = 0; buffer_i < allowed_length; buffer_i++)
   {
