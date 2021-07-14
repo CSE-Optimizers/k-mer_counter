@@ -27,12 +27,12 @@ struct StringToIntSerializer
   }
 };
 
-void mergeHashmap(dense_hash_map<uint64_t, uint64_t> newHashMap, int partition, string base_path)
+void mergeHashmap(custom_dense_hash_map newHashMap, int partition, string base_path)
 {
   // Assuming path exist
   string file_path = base_path + DIRECTORY_SEP + std::to_string(partition) + ".data";
   FILE *fp = fopen(file_path.c_str(), "r");
-  dense_hash_map<uint64_t, uint64_t> oldHashMap;
+  custom_dense_hash_map oldHashMap;
 
   if (fp)
   {
@@ -40,7 +40,7 @@ void mergeHashmap(dense_hash_map<uint64_t, uint64_t> newHashMap, int partition, 
     fclose(fp);
   }
 
-  google::dense_hash_map<uint64_t, uint64_t>::iterator it = newHashMap.begin();
+  custom_dense_hash_map::iterator it = newHashMap.begin();
 
   for (; it != newHashMap.end(); ++it)
   {
@@ -69,7 +69,7 @@ void mergeArrayToHashmap(uint64_t *dataArray, int dataArrayLength, int partition
   // Assuming path exist
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";
   FILE *fp = fopen(file_path.c_str(), "r");
-  dense_hash_map<uint64_t, uint64_t> oldHashMap;
+  custom_dense_hash_map oldHashMap;
   oldHashMap.set_empty_key(-1);
 
   if (fp)
@@ -97,7 +97,7 @@ void mergeArrayToHashmap(uint64_t *dataArray, int dataArrayLength, int partition
   oldHashMap.clear();
 }
 
-void dumpHashmap(dense_hash_map<uint64_t, uint64_t> hashMap, int partition, int partitionFileCounts[], string base_path)
+void dumpHashmap(custom_dense_hash_map hashMap, int partition, int partitionFileCounts[], string base_path)
 {
   // Assumes file_path exist
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + DIRECTORY_SEP + to_string(partitionFileCounts[partition]++);
@@ -107,7 +107,7 @@ void dumpHashmap(dense_hash_map<uint64_t, uint64_t> hashMap, int partition, int 
   fclose(fp);
 }
 
-void loadHashMap(dense_hash_map<uint64_t, uint64_t> *hashMap, int partition, string base_path)
+void loadHashMap(custom_dense_hash_map *hashMap, int partition, string base_path)
 {
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";
   FILE *fp = fopen(file_path.c_str(), "r");
@@ -122,7 +122,7 @@ void loadHashMap(dense_hash_map<uint64_t, uint64_t> *hashMap, int partition, str
 /*
   Overwrites any existing file.
   */
-void saveHashMap(dense_hash_map<uint64_t, uint64_t> *hashMap, int partition, string base_path)
+void saveHashMap(custom_dense_hash_map *hashMap, int partition, string base_path)
 {
 
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";

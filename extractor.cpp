@@ -1,7 +1,6 @@
 #include "iostream"
 #include "extractor.hpp"
 
-using google::dense_hash_map;
 using std::cout;
 using std::endl;
 
@@ -97,7 +96,7 @@ void countKmersFromBuffer(
     const uint64_t allowed_length,
     const enum LineType first_line_type,
     const bool is_starting_from_line_middle,
-    dense_hash_map<uint64_t, uint64_t> *counts)
+    custom_dense_hash_map *counts)
 {
   static bool line_type_identified = false;
   static enum LineType current_line_type;

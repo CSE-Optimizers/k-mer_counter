@@ -1,8 +1,7 @@
 #ifndef EXTRACTOR_H
 #define EXTRACTOR_H
 
-#include <sparsehash/dense_hash_map>
-using google::dense_hash_map;
+#include "utils.hpp"
 
 enum LineType
 {
@@ -21,6 +20,6 @@ void countKmersFromBuffer(
     const uint64_t allowed_length,
     const enum LineType first_line_type,
     const bool is_starting_from_line_middle,
-    dense_hash_map<uint64_t, uint64_t> *counts);
+    custom_dense_hash_map *counts);
 
 #endif
