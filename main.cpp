@@ -8,7 +8,6 @@
 #include <string>
 #include <algorithm>
 #include <mpi.h>
-#include <sparsehash/dense_hash_map>
 #include <stdlib.h>
 #include "extractor.hpp"
 #include "com.hpp"
@@ -17,8 +16,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
+#include "utils.hpp"
 
-#define READ_BUFFER_SIZE 0x200000
+#define READ_BUFFER_SIZE 0x200
 #define HASH_MAP_MAX_SIZE 0x1000000
 #define DUMP_SIZE 10
 
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 
   int kmer_size;
   char read_buffer[READ_BUFFER_SIZE + 1] = {0};
-  google::dense_hash_map<uint64_t, uint64_t> counts;
+  custom_dense_hash_map counts;
 
   int num_tasks, rank;
   uint64_t my_offset_data[2];
@@ -165,9 +165,16 @@ int main(int argc, char *argv[])
     const size_t remaining = my_allocated_size - (my_revised_offset - my_offset);
     size_t processed = 0;
     size_t current_chunk_size = 0;
+    uint64_t log_counter = 0;
 
     while (processed <= remaining && !feof(file))
     {
+      log_counter++;
+      if (log_counter%100000 == 0)
+      {
+        std::cout << rank << " " << 100* (ftell(file) - my_offset) / ((double)my_allocated_size) <<"%\n";
+      }
+      
 
       current_chunk_size = fread(read_buffer, sizeof(char), READ_BUFFER_SIZE, file);
 
@@ -297,7 +304,7 @@ int main(int argc, char *argv[])
     uint64_t *com_in_buffer;
     int source;
     int finished_tasks_n = 0;
-    google::dense_hash_map<uint64_t, uint64_t> final_counts;
+    custom_dense_hash_map final_counts;
     final_counts.set_empty_key(-1);
 
     while (finished_tasks_n < num_tasks - 1)
