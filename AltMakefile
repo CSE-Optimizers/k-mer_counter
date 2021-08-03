@@ -18,8 +18,17 @@ extractor.o: extractor.cpp extractor.hpp utils.hpp
 com.o: com.cpp com.hpp utils.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c com.cpp $(USER_LIBS)
 
+finalizer: finalizer.o MurmurHash2.o kmer_dump.o utils.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o finalizer.out finalizer.o kmer_dump.o MurmurHash2.o $(USER_LIBS)
+
+finalizer.o: finalizer.cpp kmer_dump.hpp utils.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c finalizer.cpp $(USER_LIBS)
+
 kmer_dump.o: kmer_dump.cpp kmer_dump.hpp utils.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c kmer_dump.cpp $(USER_LIBS)
 
 MurmurHash2.o: MurmurHash2.cpp MurmurHash2.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c MurmurHash2.cpp $(USER_LIBS)
+
+clean: 
+	$(RM) kmer_counter.out main.o extractor.o com.o kmer_dump.o MurmurHash2.o finalizer.out finalizer.o

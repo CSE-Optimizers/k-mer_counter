@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <sparsehash/dense_hash_map>
+#include <sparsehash/sparse_hash_map>
 #include "MurmurHash2.hpp"
 
 template <typename T>
@@ -14,6 +15,9 @@ struct CustomHasher
   }
 };
 
-typedef google::dense_hash_map<uint64_t, uint64_t, CustomHasher<const uint64_t>> custom_dense_hash_map;
+typedef uint64_t hashmap_key_type;
+typedef uint64_t hashmap_value_type;
+
+typedef google::sparse_hash_map<hashmap_key_type, hashmap_value_type, CustomHasher<const hashmap_key_type>> custom_dense_hash_map;
 
 #endif

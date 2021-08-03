@@ -4,7 +4,7 @@ using std::to_string;
 
 struct StringToIntSerializer
 {
-  bool operator()(FILE *fp, const std::pair<const uint64_t, uint64_t> &value) const
+  bool operator()(FILE *fp, const std::pair<const hashmap_key_type, hashmap_value_type> &value) const
   {
     // Write the key.
     if (fwrite(&value.first, sizeof(value.first), 1, fp) != 1)
@@ -14,14 +14,14 @@ struct StringToIntSerializer
       return false;
     return true;
   }
-  bool operator()(FILE *fp, std::pair<const uint64_t, uint64_t> *value) const
+  bool operator()(FILE *fp, std::pair<const hashmap_key_type, hashmap_value_type> *value) const
   {
     // Read the key.  Note the need for const_cast to get around
     // the fact hash_map keys are always const.
-    if (fread(const_cast<uint64_t *>(&value->first), sizeof(value->first), 1, fp) != 1)
+    if (fread(const_cast<hashmap_key_type *>(&value->first), sizeof(value->first), 1, fp) != 1)
       return false;
     // Read the value.
-    if (fread(const_cast<uint64_t *>(&value->second), sizeof(value->second), 1, fp) != 1)
+    if (fread(const_cast<hashmap_value_type *>(&value->second), sizeof(value->second), 1, fp) != 1)
       return false;
     return true;
   }
@@ -70,7 +70,7 @@ void mergeArrayToHashmap(uint64_t *dataArray, int dataArrayLength, int partition
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";
   FILE *fp = fopen(file_path.c_str(), "r");
   custom_dense_hash_map oldHashMap;
-  oldHashMap.set_empty_key(-1);
+  // oldHashMap.set_empty_key(-1);
 
   if (fp)
   {
