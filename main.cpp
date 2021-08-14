@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
   }
 
   cout << "\n\n===============\nfinal position = " << ftell(file) << std::endl;
-
+  counter.explicitStop();
   fclose(file);
   printf("\n");
 

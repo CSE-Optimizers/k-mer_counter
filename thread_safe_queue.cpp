@@ -6,22 +6,28 @@
 
 ThreadSafeQueue::ThreadSafeQueue() {}
 
-void ThreadSafeQueue::enqueue(struct counterArguments *item) {
+void ThreadSafeQueue::enqueue(struct counterArguments *item)
+{
     mu.lock();
     q.push(item);
     mu.unlock();
 }
 
-struct counterArguments* ThreadSafeQueue::dequeue() {
+struct counterArguments *ThreadSafeQueue::dequeue()
+{
     mu.lock();
-    struct counterArguments *out = q.front();
-    q.pop();
+    struct counterArguments *out = NULL;
+    if (!q.empty())
+    {
+        out = q.front();
+        q.pop();
+    }
     mu.unlock();
     return out;
-    
 }
 
-bool ThreadSafeQueue::isEmpty() {
+bool ThreadSafeQueue::isEmpty()
+{
     mu.lock();
     bool val = q.empty();
     mu.unlock();

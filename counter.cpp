@@ -39,18 +39,26 @@ void Counter::start()
             struct counterArguments *args;
             while (true)
             {
+                args = q.dequeue();
+
+                if (args != NULL)
+                {
+                    std::cout << "Counting..." << std::endl;
+                    countKmersFromBuffer(
+                        k,
+                        args->buffer,
+                        buffer_size,
+                        args->allowed_length,
+                        args->first_line_type, true, counts);
+
+                    free(args->buffer);
+                    free(args);
+                }
+
                 if (finished && q.isEmpty())
                 {
                     break;
                 }
-
-                if (!q.isEmpty())
-                {
-                    args = q.dequeue();
-                }
-
-                std::cout << args->buffer << std::endl;
-                free(args);
             }
         });
 }

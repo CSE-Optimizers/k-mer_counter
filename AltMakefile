@@ -1,15 +1,16 @@
 CC = mpiCC
 CPPFLAGS = -Wall
-CXXFLAGS = -std=c++11
+CXXFLAGS = -std=c++11 -pthread
+RM = rm
 
 # Path to sparsehash src
-USER_LIBS = -I /home/budvin/sparsehash/sparsehash-sparsehash-2.0.4/src
+USER_LIBS = -I /home/ruchin/sparsehash-sparsehash-2.0.4/src 
 
 
-main: main.o extractor.o com.o kmer_dump.o utils.hpp MurmurHash2.o
-	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o kmer_counter.out main.o extractor.o com.o kmer_dump.o MurmurHash2.o $(USER_LIBS)
+main: main.o extractor.o com.o kmer_dump.o utils.hpp MurmurHash2.o thread_safe_queue.o counter.o 
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o kmer_counter.out main.o extractor.o com.o kmer_dump.o MurmurHash2.o thread_safe_queue.o counter.o $(USER_LIBS)
 
-main.o: main.cpp extractor.hpp com.hpp kmer_dump.hpp utils.hpp
+main.o: main.cpp extractor.hpp com.hpp kmer_dump.hpp utils.hpp counter.hpp thread_safe_queue.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c main.cpp $(USER_LIBS)
 
 extractor.o: extractor.cpp extractor.hpp utils.hpp
@@ -17,6 +18,12 @@ extractor.o: extractor.cpp extractor.hpp utils.hpp
 
 com.o: com.cpp com.hpp utils.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c com.cpp $(USER_LIBS)
+
+thread_safe_queue.o: thread_safe_queue.cpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c thread_safe_queue.cpp $(USER_LIBS)
+
+counter.o: counter.cpp thread_safe_queue.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c counter.cpp $(USER_LIBS)
 
 finalizer: finalizer.o MurmurHash2.o kmer_dump.o utils.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o finalizer.out finalizer.o kmer_dump.o MurmurHash2.o $(USER_LIBS)
@@ -31,4 +38,4 @@ MurmurHash2.o: MurmurHash2.cpp MurmurHash2.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c MurmurHash2.cpp $(USER_LIBS)
 
 clean: 
-	$(RM) kmer_counter.out main.o extractor.o com.o kmer_dump.o MurmurHash2.o finalizer.out finalizer.o
+	$(RM) *.o kmer_counter.out 
