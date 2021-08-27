@@ -24,6 +24,7 @@
 #define READ_BUFFER_SIZE 0x200
 #define HASH_MAP_MAX_SIZE 0x1000000
 #define DUMP_SIZE 10
+#define READ_QUEUE_SIZE 10
 
 static inline __attribute__((always_inline)) void getKmerFromIndex(const int kmer_size, const uint64_t index, char *out_buffer)
 {
@@ -162,7 +163,7 @@ int main(int argc, char *argv[])
   size_t current_chunk_size = 0;
   uint64_t log_counter = 0;
 
-  Counter counter(kmer_size, READ_BUFFER_SIZE, &counts);
+  Counter counter(kmer_size, READ_BUFFER_SIZE, &counts, READ_QUEUE_SIZE);
 
   while (processed <= remaining && !feof(file))
   {

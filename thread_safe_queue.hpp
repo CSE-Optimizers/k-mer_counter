@@ -4,6 +4,7 @@
 #include <queue>
 #include <mutex>
 #include <string>
+#include <condition_variable>
 
 #include "extractor.hpp"
 
@@ -20,6 +21,8 @@ class ThreadSafeQueue
 public:
     ThreadSafeQueue();
 
+    void setLimit(int value);
+
     void enqueue(struct counterArguments *item);
 
     struct counterArguments* dequeue();
@@ -28,7 +31,10 @@ public:
 
 private:
     std::queue<struct counterArguments*> q;
+    std::condition_variable condition;
     std::mutex mu;
+    int count = 0;
+    int limit =10;
 };
 
 #endif

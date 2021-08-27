@@ -10,7 +10,8 @@ class Counter
 public:
     explicit Counter(uint64_t k,
                      uint64_t buffer_size,
-                     custom_dense_hash_map *counts);
+                     custom_dense_hash_map *counts,
+                     int read_queue_size);
 
     ~Counter();
 

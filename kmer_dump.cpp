@@ -121,10 +121,9 @@ void loadHashMap(custom_dense_hash_map *hashMap, int partition, string base_path
 
 /*
   Overwrites any existing file.
-  */
+*/
 void saveHashMap(custom_dense_hash_map *hashMap, int partition, string base_path)
 {
-
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";
   FILE *fp = fopen(file_path.c_str(), "w");
 
