@@ -2,10 +2,10 @@ CC = mpiCC
 CPPFLAGS = -Wall
 CXXFLAGS = -std=c++11
 
-main: main.o extractor.o com.o kmer_dump.o utils.hpp MurmurHash2.o
-	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o kmer_counter.out main.o extractor.o com.o kmer_dump.o MurmurHash2.o
+main: main.o extractor.o com.o kmer_dump.o utils.hpp MurmurHash2.o thread_safe_queue.o counter.o 
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o kmer_counter.out main.o extractor.o com.o kmer_dump.o MurmurHash2.o thread_safe_queue.o counter.o 
 
-main.o: main.cpp extractor.hpp com.hpp kmer_dump.hpp utils.hpp
+main.o: main.cpp extractor.hpp com.hpp kmer_dump.hpp utils.hpp counter.hpp thread_safe_queue.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c main.cpp
 
 extractor.o: extractor.cpp extractor.hpp utils.hpp
@@ -13,6 +13,12 @@ extractor.o: extractor.cpp extractor.hpp utils.hpp
 
 com.o: com.cpp com.hpp utils.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c com.cpp
+
+thread_safe_queue.o: thread_safe_queue.cpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c thread_safe_queue.cpp
+
+counter.o: counter.cpp thread_safe_queue.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c counter.cpp
 
 finalizer: finalizer.o MurmurHash2.o kmer_dump.o utils.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o finalizer.out finalizer.o kmer_dump.o MurmurHash2.o

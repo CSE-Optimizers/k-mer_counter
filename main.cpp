@@ -16,11 +16,15 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
+
 #include "utils.hpp"
+#include "counter.hpp"
+#include "thread_safe_queue.hpp"
 
 #define READ_BUFFER_SIZE 0x200
 #define HASH_MAP_MAX_SIZE 0x1000000
 #define DUMP_SIZE 10
+#define READ_QUEUE_SIZE 10
 
 static inline __attribute__((always_inline)) void getKmerFromIndex(const int kmer_size, const uint64_t index, char *out_buffer)
 {
@@ -107,6 +111,7 @@ int main(int argc, char *argv[])
 
     offset_data[num_tasks - 1][1] = (total_size - ((num_tasks - 1) * chunk_size)); // last ranked procedd will do all remaining work
   }
+
   MPI_Scatter(offset_data, 2, MPI_UINT64_T, my_offset_data, 2,
               MPI_UINT64_T, 0, MPI_COMM_WORLD);
 
@@ -152,13 +157,13 @@ int main(int argc, char *argv[])
   //return to revised starting point
   fseek(file, my_revised_offset, SEEK_SET);
 
-  memset(read_buffer, 0, READ_BUFFER_SIZE + 1);
-
   // adjust range size due to ignoring the first line
   const size_t remaining = my_allocated_size - (my_revised_offset - my_offset);
   size_t processed = 0;
   size_t current_chunk_size = 0;
   uint64_t log_counter = 0;
+
+  Counter counter(kmer_size, READ_BUFFER_SIZE, &counts, READ_QUEUE_SIZE);
 
   while (processed <= remaining && !feof(file))
   {
@@ -167,17 +172,23 @@ int main(int argc, char *argv[])
     {
       std::cout << rank << " " << 100 * (ftell(file) - my_offset) / ((double)my_allocated_size) << "%\n";
     }
+    char *read_buffer2 = (char *)malloc((READ_BUFFER_SIZE + 1) * sizeof(char));
+    current_chunk_size = fread(read_buffer2, sizeof(char), READ_BUFFER_SIZE, file);
 
-    current_chunk_size = fread(read_buffer, sizeof(char), READ_BUFFER_SIZE, file);
+    struct counterArguments *args = (struct counterArguments *)malloc(sizeof(struct counterArguments));
+    args->allowed_length = (processed + current_chunk_size) <= remaining ? current_chunk_size : remaining - processed;
+    args->buffer = read_buffer2;
+    args->first_line_type = first_line_type;
 
-    countKmersFromBuffer(
-        kmer_size,
-        read_buffer,
-        READ_BUFFER_SIZE,
-        (processed + current_chunk_size) <= remaining ? current_chunk_size : remaining - processed,
-        first_line_type, true, &counts);
+    counter.enqueue(args);
+    // countKmersFromBuffer(
+    //     kmer_size,
+    //     read_buffer,
+    //     READ_BUFFER_SIZE,
+    //     (processed + current_chunk_size) <= remaining ? current_chunk_size : remaining - processed,
+    //     first_line_type, true, &counts);
+
     processed += current_chunk_size;
-    memset(read_buffer, 0, READ_BUFFER_SIZE + 1);
   }
 
   // return to one character before the end of allocated range
@@ -190,18 +201,26 @@ int main(int argc, char *argv[])
     // process the remaining part of the line
 
     // cout << "\nrading the remaining part of the last line \n";
-    fgets(read_buffer, READ_BUFFER_SIZE, file);
-    countKmersFromBuffer(
-        kmer_size,
-        read_buffer,
-        READ_BUFFER_SIZE,
-        strlen(read_buffer),
-        first_line_type, true, &counts);
-    memset(read_buffer, 0, READ_BUFFER_SIZE + 1);
+    char *read_buffer2 = (char *)malloc((READ_BUFFER_SIZE + 1) * sizeof(char));
+    fgets(read_buffer2, READ_BUFFER_SIZE, file);
+
+    struct counterArguments *args = (struct counterArguments *)malloc(sizeof(struct counterArguments));
+    args->allowed_length = strlen(read_buffer);
+    args->buffer = read_buffer2;
+    args->first_line_type = first_line_type;
+
+    counter.enqueue(args);
+    // countKmersFromBuffer(
+    //     kmer_size,
+    //     read_buffer,
+    //     READ_BUFFER_SIZE,
+    //     strlen(read_buffer),
+    //     first_line_type, true, &counts);
+    // memset(read_buffer, 0, READ_BUFFER_SIZE + 1);
   }
 
   cout << "\n\n===============\nfinal position = " << ftell(file) << std::endl;
-
+  counter.explicitStop();
   fclose(file);
   printf("\n");
 
