@@ -7,13 +7,21 @@
 
 Counter::Counter(uint64_t k,
                  uint64_t buffer_size,
-                 custom_dense_hash_map *counts,
-                 int read_queue_size)
+                 int read_queue_size,
+                 boost::lockfree::queue<struct writerArguments*> *writer_queue,
+                 int partition_count)
 {
     q.setLimit(read_queue_size);
     this->k = k;
     this->buffer_size = buffer_size;
-    this->counts = counts;
+    this->writer_queue = writer_queue;
+    this->partition_count = partition_count;
+    this->counts = (custom_dense_hash_map**)malloc(partition_count*sizeof(custom_dense_hash_map**));
+    
+    for(int i=0; i<partition_count; i++){
+        this->counts[i] = new custom_dense_hash_map;
+    }
+
     start();
 }
 
@@ -46,12 +54,20 @@ void Counter::start()
                 if (args != NULL)
                 {
                     // std::cout << args->buffer << std::endl;
-                    countKmersFromBuffer(
+                    // countKmersFromBuffer(
+                    //     k,
+                    //     args->buffer,
+                    //     buffer_size,
+                    //     args->allowed_length,
+                    //     args->first_line_type, true, counts);
+
+                    countKmersFromBufferWithPartitioning(
                         k,
                         args->buffer,
                         buffer_size,
                         args->allowed_length,
-                        args->first_line_type, true, counts);
+                        args->first_line_type,
+                        true, counts, partition_count, writer_queue);
 
                     free(args->buffer);
                     free(args);
@@ -70,5 +86,14 @@ void Counter::stop() noexcept
     if (runner.joinable())
     {
         runner.join();
+    }
+    
+    for(int i=0; i<partition_count; i++){
+        struct writerArguments * this_writer_argument;
+        this_writer_argument = new writerArguments;
+        this_writer_argument->partition = i;
+        this_writer_argument->counts = counts[i];
+    
+        writer_queue->push(this_writer_argument);
     }
 }

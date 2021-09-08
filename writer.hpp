@@ -3,35 +3,30 @@
 #include "thread_safe_queue.hpp"
 #include <boost/lockfree/queue.hpp>
 #include "utils.hpp"
+#include <string>
 
-#ifndef THREADER_H
-#define THREADER_H
+#ifndef WRITER_H
+#define WRITER_H
 
-class Counter
+class Writer
 {
 public:
-    explicit Counter(uint64_t k,
-                     uint64_t buffer_size,
-                     int read_queue_size,
+    explicit Writer(std::string file_path,
                      boost::lockfree::queue<struct writerArguments*> *writer_queue,
                      int partition_count);
 
-    ~Counter();
-
-    void enqueue(struct counterArguments *args);
+    ~Writer();
 
     void explicitStop();
 
 private:
     std::thread runner;
-    ThreadSafeQueue q;
     bool finished = false;
-    uint64_t k;
-    uint64_t buffer_size;
-    custom_dense_hash_map **counts;
+    std::string file_path;
     boost::lockfree::queue<struct writerArguments*> *writer_queue;
     int partition_count;
-    
+    int *file_counts;
+
     void start();
 
     void stop() noexcept;

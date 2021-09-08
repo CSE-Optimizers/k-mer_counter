@@ -16,15 +16,18 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <boost/lockfree/queue.hpp>
 
 #include "utils.hpp"
 #include "counter.hpp"
 #include "thread_safe_queue.hpp"
+#include "writer.hpp"
 
 #define READ_BUFFER_SIZE 0x200
 #define HASH_MAP_MAX_SIZE 0x1000000
 #define DUMP_SIZE 10
 #define READ_QUEUE_SIZE 10
+#define PARTITION_COUNT 10
 
 static inline __attribute__((always_inline)) void getKmerFromIndex(const int kmer_size, const uint64_t index, char *out_buffer)
 {
@@ -66,7 +69,7 @@ int main(int argc, char *argv[])
 
   int kmer_size;
   char read_buffer[READ_BUFFER_SIZE + 1] = {0};
-  custom_dense_hash_map counts;
+  // custom_dense_hash_map counts;
 
   int num_tasks, rank;
   uint64_t my_offset_data[2];
@@ -79,6 +82,8 @@ int main(int argc, char *argv[])
   MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   uint64_t offset_data[num_tasks][2]; //offset and allocated size for this process (in bytes)
+
+  boost::lockfree::queue<struct writerArguments*> writer_queue(10);
 
   std::cout << "total processes = " << num_tasks << std::endl;
   std::cout << "rank = " << rank << std::endl;
@@ -163,7 +168,8 @@ int main(int argc, char *argv[])
   size_t current_chunk_size = 0;
   uint64_t log_counter = 0;
 
-  Counter counter(kmer_size, READ_BUFFER_SIZE, &counts, READ_QUEUE_SIZE);
+  Counter counter(kmer_size, READ_BUFFER_SIZE, READ_QUEUE_SIZE, &writer_queue, PARTITION_COUNT);
+  Writer writer("data", &writer_queue, PARTITION_COUNT);
 
   while (processed <= remaining && !feof(file))
   {
@@ -221,6 +227,7 @@ int main(int argc, char *argv[])
 
   cout << "\n\n===============\nfinal position = " << ftell(file) << std::endl;
   counter.explicitStop();
+  writer.explicitStop();
   fclose(file);
   printf("\n");
 
@@ -233,11 +240,11 @@ int main(int argc, char *argv[])
   //   std::cout << kmer << " " << it->second << std::endl;
   // }
 
-  saveHashMap(&counts, rank, "data");
-  counts.clear();
+  // saveHashMap(&counts, rank, "data");
+  // counts.clear();
 
-  std::cout << rank << " hashmap size = " << counts.size();
-  std::cout << "\tbucket count = " << counts.bucket_count() << std::endl;
+  // std::cout << rank << " hashmap size = " << counts.size();
+  // std::cout << "\tbucket count = " << counts.bucket_count() << std::endl;
 
   std::cout << "finalizing.." << rank << std::endl;
   MPI_Finalize();

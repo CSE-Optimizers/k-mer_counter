@@ -115,7 +115,7 @@ void loadHashMap(custom_dense_hash_map *hashMap, int partition, string base_path
   if (fp)
   {
     (*hashMap).unserialize(StringToIntSerializer(), fp);
-    fclose(fp);
+    fclose(fp);std::system(("mkdir -p "+ base_path).c_str());
   }
 }
 
@@ -124,6 +124,7 @@ void loadHashMap(custom_dense_hash_map *hashMap, int partition, string base_path
 */
 void saveHashMap(custom_dense_hash_map *hashMap, int partition, string base_path)
 {
+  std::system(("mkdir -p "+ base_path).c_str());
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";
   FILE *fp = fopen(file_path.c_str(), "w");
 
