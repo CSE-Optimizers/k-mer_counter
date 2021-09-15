@@ -33,4 +33,4 @@ MurmurHash2.o: MurmurHash2.cpp MurmurHash2.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c MurmurHash2.cpp
 
 clean: 
-	$(RM) kmer_counter.out main.o extractor.o com.o kmer_dump.o MurmurHash2.o finalizer.out finalizer.o
+	$(RM) kmer_counter.out *.o
