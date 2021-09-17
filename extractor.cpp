@@ -5,7 +5,7 @@ using std::cout;
 using std::endl;
 
 #define LINE_READ_BUFFER_SIZE 2050
-#define HASHMAP_MAX_SIZE 32768
+#define HASHMAP_MAX_SIZE 0x400000
 
 int checkLineReadBuffer(size_t buffer_size, char *buffer)
 {
@@ -136,7 +136,11 @@ void countKmersFromBuffer(
     kmer_filled_length++;
 
     kmer_filled_length = std::min(kmer_filled_length, kmer_size);
-    current_character_encoding = getCharacterEncoding(buffer[buffer_i]);
+
+    current_character_encoding = (uint64_t) ((buffer[buffer_i] & 14)>>1);
+
+    // current_character_encoding = getCharacterEncoding(buffer[buffer_i]);
+    
     current_kmer_encoding = ((current_kmer_encoding << 2) & bit_clear_mask) | current_character_encoding;
     // cout << "character=" << buffer[buffer_i] << " character_encoding=" << current_character_encoding
     //      << " kmer_encoding=" << current_kmer_encoding << " kmer_filled_length=" << kmer_filled_length << endl;
@@ -198,7 +202,9 @@ void countKmersFromBufferWithPartitioning(
     kmer_filled_length++;
 
     kmer_filled_length = std::min(kmer_filled_length, kmer_size);
-    current_character_encoding = getCharacterEncoding(buffer[buffer_i]);
+    
+    current_character_encoding = (uint64_t) ((buffer[buffer_i] & 14)>>1);
+    
     current_kmer_encoding = ((current_kmer_encoding << 2) & bit_clear_mask) | current_character_encoding;
     // cout << "character=" << buffer[buffer_i] << " character_encoding=" << current_character_encoding
     //      << " kmer_encoding=" << current_kmer_encoding << " kmer_filled_length=" << kmer_filled_length << endl;
@@ -206,7 +212,6 @@ void countKmersFromBufferWithPartitioning(
     {
       if (kmer_filled_length == kmer_size)
       {
-        // (*counts)[current_kmer_encoding]++;
         int current_kmer_partition = getKmerPartition(current_kmer_encoding, kmer_size, partition_count);
         (*counts[current_kmer_partition])[current_kmer_encoding]++;
 
@@ -219,6 +224,7 @@ void countKmersFromBufferWithPartitioning(
           writer_queue->push(this_writer_argument);
 
           custom_dense_hash_map *tmp = new custom_dense_hash_map;
+          tmp->set_empty_key(-1);
           counts[current_kmer_partition] = tmp;
         }
       }

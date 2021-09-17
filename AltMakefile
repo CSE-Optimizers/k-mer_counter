@@ -1,14 +1,13 @@
 CC = mpic++
 CPPFLAGS = -Wall
-CXXFLAGS = -std=c++11 -pthread
+CXXFLAGS = -O2 -std=c++11 -pthread -I /home/damika/boost-1.77.0/built/include  -L/home/damika/boost-1.77.0/built/lib -lboost_thread -lboost_system
 RM = rm
 
 # Path to sparsehash src
 USER_LIBS = -I /home/damika/cloud/programs/sparsehash-sparsehash-2.0.4/src 
 
-
 main: main.o extractor.o com.o kmer_dump.o utils.hpp MurmurHash2.o thread_safe_queue.o counter.o writer.o
-	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o kmer_counter.out main.o extractor.o com.o kmer_dump.o MurmurHash2.o thread_safe_queue.o counter.o $(USER_LIBS)
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o kmer_counter.out main.o extractor.o com.o kmer_dump.o MurmurHash2.o thread_safe_queue.o counter.o writer.o $(USER_LIBS)
 
 main.o: main.cpp extractor.hpp com.hpp kmer_dump.hpp utils.hpp counter.hpp thread_safe_queue.hpp writer.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c main.cpp $(USER_LIBS)

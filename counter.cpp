@@ -20,6 +20,7 @@ Counter::Counter(uint64_t k,
     
     for(int i=0; i<partition_count; i++){
         this->counts[i] = new custom_dense_hash_map;
+        this->counts[i]->set_empty_key(-1);
     }
 
     start();
@@ -27,7 +28,8 @@ Counter::Counter(uint64_t k,
 
 Counter::~Counter()
 {
-    stop();
+    if(!finished)
+        stop();
 }
 
 void Counter::enqueue(struct counterArguments *args)
@@ -53,14 +55,6 @@ void Counter::start()
 
                 if (args != NULL)
                 {
-                    // std::cout << args->buffer << std::endl;
-                    // countKmersFromBuffer(
-                    //     k,
-                    //     args->buffer,
-                    //     buffer_size,
-                    //     args->allowed_length,
-                    //     args->first_line_type, true, counts);
-
                     countKmersFromBufferWithPartitioning(
                         k,
                         args->buffer,

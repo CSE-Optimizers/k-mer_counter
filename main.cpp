@@ -47,11 +47,11 @@ static inline __attribute__((always_inline)) void getKmerFromIndex(const int kme
       break;
 
     case 2:
-      out_buffer[i] = 'G';
+      out_buffer[i] = 'T';
       break;
 
     case 3:
-      out_buffer[i] = 'T';
+      out_buffer[i] = 'G';
       break;
 
     default:
@@ -69,14 +69,12 @@ int main(int argc, char *argv[])
 
   int kmer_size;
   char read_buffer[READ_BUFFER_SIZE + 1] = {0};
-  // custom_dense_hash_map counts;
 
   int num_tasks, rank;
   uint64_t my_offset_data[2];
 
   const char *file_name = argv[1];
   kmer_size = atoi(argv[2]);
-  // counts.set_empty_key(-1);
 
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
@@ -152,7 +150,7 @@ int main(int argc, char *argv[])
       // just do fgets and ignore the current line.
       // that line will be processed by the previous rank process.
       fgets(read_buffer, READ_BUFFER_SIZE, file);
-      cout << "ignored first line = \"" << read_buffer << "\"" << endl;
+      // cout << "ignored first line = \"" << read_buffer << "\"" << endl;
       my_revised_offset = ftell(file);
     }
   }
@@ -169,7 +167,7 @@ int main(int argc, char *argv[])
   uint64_t log_counter = 0;
 
   Counter counter(kmer_size, READ_BUFFER_SIZE, READ_QUEUE_SIZE, &writer_queue, PARTITION_COUNT);
-  Writer writer("data", &writer_queue, PARTITION_COUNT);
+  Writer writer("data", &writer_queue, PARTITION_COUNT,rank);
 
   while (processed <= remaining && !feof(file))
   {
@@ -187,12 +185,6 @@ int main(int argc, char *argv[])
     args->first_line_type = first_line_type;
 
     counter.enqueue(args);
-    // countKmersFromBuffer(
-    //     kmer_size,
-    //     read_buffer,
-    //     READ_BUFFER_SIZE,
-    //     (processed + current_chunk_size) <= remaining ? current_chunk_size : remaining - processed,
-    //     first_line_type, true, &counts);
 
     processed += current_chunk_size;
   }
@@ -216,35 +208,12 @@ int main(int argc, char *argv[])
     args->first_line_type = first_line_type;
 
     counter.enqueue(args);
-    // countKmersFromBuffer(
-    //     kmer_size,
-    //     read_buffer,
-    //     READ_BUFFER_SIZE,
-    //     strlen(read_buffer),
-    //     first_line_type, true, &counts);
-    // memset(read_buffer, 0, READ_BUFFER_SIZE + 1);
   }
 
-  cout << "\n\n===============\nfinal position = " << ftell(file) << std::endl;
   counter.explicitStop();
   writer.explicitStop();
   fclose(file);
   printf("\n");
-
-  // custom_dense_hash_map::iterator it = counts.begin();
-
-  // char *kmer = (char *)calloc(kmer_size + 1, sizeof(char));
-  // for (; it != counts.end(); ++it)
-  // {
-  //   getKmerFromIndex(kmer_size, it->first, kmer);
-  //   std::cout << kmer << " " << it->second << std::endl;
-  // }
-
-  // saveHashMap(&counts, rank, "data");
-  // counts.clear();
-
-  // std::cout << rank << " hashmap size = " << counts.size();
-  // std::cout << "\tbucket count = " << counts.bucket_count() << std::endl;
 
   std::cout << "finalizing.." << rank << std::endl;
   MPI_Finalize();

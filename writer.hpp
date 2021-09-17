@@ -13,7 +13,8 @@ class Writer
 public:
     explicit Writer(std::string file_path,
                      boost::lockfree::queue<struct writerArguments*> *writer_queue,
-                     int partition_count);
+                     int partition_count,
+                     int rank);
 
     ~Writer();
 
@@ -26,6 +27,7 @@ private:
     boost::lockfree::queue<struct writerArguments*> *writer_queue;
     int partition_count;
     int *file_counts;
+    int rank;
 
     void start();
 
