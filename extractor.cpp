@@ -137,9 +137,8 @@ void countKmersFromBuffer(
 
     kmer_filled_length = std::min(kmer_filled_length, kmer_size);
 
-    current_character_encoding = (uint64_t) ((buffer[buffer_i] & 14)>>1);
-
-    // current_character_encoding = getCharacterEncoding(buffer[buffer_i]);
+    current_character_encoding = getCharacterEncoding(buffer[buffer_i]);
+    // current_character_encoding = (uint64_t) ((buffer[buffer_i] & 14)>>1);
     
     current_kmer_encoding = ((current_kmer_encoding << 2) & bit_clear_mask) | current_character_encoding;
     // cout << "character=" << buffer[buffer_i] << " character_encoding=" << current_character_encoding
@@ -203,7 +202,8 @@ void countKmersFromBufferWithPartitioning(
 
     kmer_filled_length = std::min(kmer_filled_length, kmer_size);
     
-    current_character_encoding = (uint64_t) ((buffer[buffer_i] & 14)>>1);
+    current_character_encoding = getCharacterEncoding(buffer[buffer_i]);
+    // current_character_encoding = (uint64_t) ((buffer[buffer_i] & 14)>>1);
     
     current_kmer_encoding = ((current_kmer_encoding << 2) & bit_clear_mask) | current_character_encoding;
     // cout << "character=" << buffer[buffer_i] << " character_encoding=" << current_character_encoding

@@ -23,7 +23,7 @@
 #include "thread_safe_queue.hpp"
 #include "writer.hpp"
 
-#define READ_BUFFER_SIZE 0x200
+#define READ_BUFFER_SIZE 0x1000
 #define HASH_MAP_MAX_SIZE 0x1000000
 #define DUMP_SIZE 10
 #define READ_QUEUE_SIZE 10
@@ -86,14 +86,10 @@ int main(int argc, char *argv[])
   std::cout << "total processes = " << num_tasks << std::endl;
   std::cout << "rank = " << rank << std::endl;
 
+  std::system("rm -rf /home/damika/Documents/test_results/data")
+
   if (rank == 0)
   {
-    // {
-    //   int i = 0;
-    //   while (0 == i)
-    //     sleep(5);
-    // }
-
     // Calculating total file size
     struct stat data_file_stats;
     if (stat(file_name, &data_file_stats) != 0)
