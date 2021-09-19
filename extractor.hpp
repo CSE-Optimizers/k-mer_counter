@@ -2,6 +2,7 @@
 #define EXTRACTOR_H
 
 #include "utils.hpp"
+#include <boost/lockfree/queue.hpp>
 
 enum LineType
 {
@@ -21,5 +22,16 @@ void countKmersFromBuffer(
     const enum LineType first_line_type,
     const bool is_starting_from_line_middle,
     custom_dense_hash_map *counts);
+
+void countKmersFromBufferWithPartitioning(
+    const uint64_t kmer_size,
+    char *buffer,
+    const uint64_t buffer_size,
+    const uint64_t allowed_length,
+    const enum LineType first_line_type,
+    const bool is_starting_from_line_middle,
+    custom_dense_hash_map **counts,
+    int partition_count,
+    boost::lockfree::queue<struct writerArguments*> *writer_queue);
 
 #endif
