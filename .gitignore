@@ -36,6 +36,7 @@
 # k-mer dump
 *.data
 output.txt
+data_file/
 
 # IDE data
 .vscode

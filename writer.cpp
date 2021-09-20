@@ -8,12 +8,14 @@
 Writer::Writer(std::string file_path,
                      boost::lockfree::queue<struct writerArguments*> *writer_queue,
                      int partition_count,
-                     int rank)
+                     int rank,
+                     std::string base_path)
 {
     this->file_path = file_path;
     this->writer_queue = writer_queue;
     this->partition_count = partition_count;
     this->rank = rank;
+    this->base_path = base_path;
 
     this->file_counts = (int*)malloc(partition_count*sizeof(int));
     for(int i=0; i<partition_count; i++){
@@ -48,7 +50,8 @@ void Writer::start()
                     // std::cout<<"Successful pop"<<std::endl;
                     // string save_directory_base_path = "data/"+ std::to_string(args->partition);
                     // saveHashMap(args->counts, file_counts[args->partition], "data/"+ std::to_string(args->partition));
-                    saveHashMap(args->counts, file_counts[args->partition], "/home/damika/Documents/test_results/data/"+ std::to_string(args->partition));
+                    // saveHashMap(args->counts, file_counts[args->partition], "/home/damika/Documents/test_results/data/"+ std::to_string(args->partition));
+                    saveHashMap(args->counts, file_counts[args->partition], base_path + std::to_string(args->partition));
                    
                     file_counts[args->partition]++;
                     args->counts->clear();      // this this should be here to clear the hashmap

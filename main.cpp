@@ -75,6 +75,7 @@ int main(int argc, char *argv[])
 
   const char *file_name = argv[1];
   kmer_size = atoi(argv[2]);
+  std::string output_file_path = argv[3];
 
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
@@ -86,7 +87,7 @@ int main(int argc, char *argv[])
   std::cout << "total processes = " << num_tasks << std::endl;
   std::cout << "rank = " << rank << std::endl;
 
-  std::system("rm -rf /home/damika/Documents/test_results/data")
+  std::system(("rm -rf " + output_file_path).c_str());
 
   if (rank == 0)
   {
@@ -163,7 +164,7 @@ int main(int argc, char *argv[])
   uint64_t log_counter = 0;
 
   Counter counter(kmer_size, READ_BUFFER_SIZE, READ_QUEUE_SIZE, &writer_queue, PARTITION_COUNT);
-  Writer writer("data", &writer_queue, PARTITION_COUNT,rank);
+  Writer writer("data", &writer_queue, PARTITION_COUNT, rank, output_file_path);
 
   while (processed <= remaining && !feof(file))
   {
