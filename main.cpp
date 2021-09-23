@@ -28,7 +28,7 @@
 #define DUMP_SIZE 10
 #define READ_QUEUE_SIZE 10
 #define PARTITION_COUNT 10
-#define SEGMENT_COUNT 100
+#define SEGMENT_COUNT 50
 
 using std::cout;
 using std::endl;
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
     while(i < SEGMENT_COUNT) 
     {   
       MPI_Recv(&node_rank, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      segmentData[0] = i;
+      segmentData[0] = i*chunk_size;
       segmentData[1] = chunk_size;
 
       if (i == (SEGMENT_COUNT-1)) 
@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
 
       cout << rank <<" Current Allocations : " << currentAllocations[0] << endl;
 
-      uint64_t my_offset = currentAllocations[0]*currentAllocations[1];
+      uint64_t my_offset = currentAllocations[0];
       uint64_t my_revised_offset = my_offset;
       uint64_t my_allocated_size = currentAllocations[1];
 
@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
       {
         
         log_counter++;
-        // if (log_counter % 100000 == 0)
+        // if (log_counter % 1000 == 0)
         // {
         //   cout << rank << " " << 100 * (ftell(file) - my_offset) / ((double)my_allocated_size) << "%\n";
         // }
@@ -260,7 +260,6 @@ int main(int argc, char *argv[])
 
         counter.enqueue(args);
       }
-
     } 
     counter.explicitStop();
     writer.explicitStop();
