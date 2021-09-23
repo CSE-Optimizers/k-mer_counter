@@ -127,8 +127,7 @@ int main(int argc, char *argv[])
       MPI_Send(segmentData, 2, MPI_INT, node_rank, 1, MPI_COMM_WORLD);
       i++;
     }
-
-    
+  
     for (int j =1; j < num_tasks; j++) {
       MPI_Recv(&node_rank, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
