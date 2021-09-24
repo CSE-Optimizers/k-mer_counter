@@ -85,10 +85,11 @@ int main(int argc, char *argv[])
   char processor_name[MPI_MAX_PROCESSOR_NAME];
   MPI_Get_processor_name(processor_name, &namelen);
 
-  boost::lockfree::queue<struct writerArguments*> writer_queue(10);
+  boost::lockfree::queue<struct writerArguments *> writer_queue(10);
 
-  if(rank==0)std::cout << "total processes = " << num_tasks << std::endl;
-  std::cout << "rank = " << rank << " Node: "<< processor_name<< std::endl;
+  if (rank == 0)
+    std::cout << "total processes = " << num_tasks << std::endl;
+  std::cout << "rank = " << rank << " Node: " << processor_name << std::endl;
 
   std::system("rm -rf /home/damika/Documents/test_results/data/*/*.data");
 
@@ -108,7 +109,7 @@ int main(int argc, char *argv[])
 
     for (int process_i = 1; process_i < num_tasks; process_i++)
     {
-      offset_data[process_i][0] = (process_i - 1)*chunk_size;
+      offset_data[process_i][0] = (process_i - 1) * chunk_size;
       offset_data[process_i][1] = chunk_size;
     }
 
@@ -138,7 +139,8 @@ int main(int argc, char *argv[])
   // clock_t t;
 
   std::cout << "my (" << rank << ")\t offset = " << my_offset << "\t chunk_size = " << my_allocated_size << std::endl;
-  if (rank > 0) {
+  if (rank > 0)
+  {
     memset(read_buffer, 0, READ_BUFFER_SIZE * (sizeof read_buffer[0]));
 
     FILE *file = fopen(file_name, "r");
@@ -170,7 +172,7 @@ int main(int argc, char *argv[])
     uint64_t log_counter = 0;
 
     Counter counter(kmer_size, READ_BUFFER_SIZE, READ_QUEUE_SIZE, &writer_queue, PARTITION_COUNT);
-    Writer writer("data", &writer_queue, PARTITION_COUNT,rank);
+    Writer writer("data", &writer_queue, PARTITION_COUNT, rank);
 
     while (processed <= remaining && !feof(file))
     {

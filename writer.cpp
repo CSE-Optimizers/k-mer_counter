@@ -76,6 +76,10 @@ void Writer::stop() noexcept
     string st="";
     for(int i=0;i<partition_count;i++){
         st+=" "+std::to_string(file_counts[i]);
+        string stats_file_path ="/home/damika/Documents/test_results/data/"+ std::to_string(i) +"/stats";
+        FILE *stats_file_fp = fopen(stats_file_path.c_str(), "w");
+        fwrite(&file_counts[i], sizeof(int), 1, stats_file_fp);
+        fclose(stats_file_fp);
     }
     
     std::cout<<"Paritition summary-> "<<rank<<"\n"<<st<<std::endl;

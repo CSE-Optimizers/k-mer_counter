@@ -92,7 +92,7 @@ static inline __attribute__((always_inline)) uint64_t getCharacterEncoding(const
 
 static inline __attribute__((always_inline)) int getKmerPartition(const uint64_t kmer, int kmer_size, int partition_count)
 {
-    return kmer%partition_count;
+  return kmer % partition_count;
 }
 
 void countKmersFromBuffer(
@@ -139,7 +139,7 @@ void countKmersFromBuffer(
 
     current_character_encoding = getCharacterEncoding(buffer[buffer_i]);
     // current_character_encoding = (uint64_t) ((buffer[buffer_i] & 14)>>1);
-    
+
     current_kmer_encoding = ((current_kmer_encoding << 2) & bit_clear_mask) | current_character_encoding;
     // cout << "character=" << buffer[buffer_i] << " character_encoding=" << current_character_encoding
     //      << " kmer_encoding=" << current_kmer_encoding << " kmer_filled_length=" << kmer_filled_length << endl;
@@ -167,7 +167,7 @@ void countKmersFromBufferWithPartitioning(
     const bool is_starting_from_line_middle,
     custom_dense_hash_map **counts,
     int partition_count,
-    boost::lockfree::queue<struct writerArguments*> *writer_queue)
+    boost::lockfree::queue<struct writerArguments *> *writer_queue)
 {
   static bool line_type_identified = false;
   static enum LineType current_line_type;
@@ -201,10 +201,10 @@ void countKmersFromBufferWithPartitioning(
     kmer_filled_length++;
 
     kmer_filled_length = std::min(kmer_filled_length, kmer_size);
-    
+
     current_character_encoding = getCharacterEncoding(buffer[buffer_i]);
     // current_character_encoding = (uint64_t) ((buffer[buffer_i] & 14)>>1);
-    
+
     current_kmer_encoding = ((current_kmer_encoding << 2) & bit_clear_mask) | current_character_encoding;
     // cout << "character=" << buffer[buffer_i] << " character_encoding=" << current_character_encoding
     //      << " kmer_encoding=" << current_kmer_encoding << " kmer_filled_length=" << kmer_filled_length << endl;
@@ -215,12 +215,13 @@ void countKmersFromBufferWithPartitioning(
         int current_kmer_partition = getKmerPartition(current_kmer_encoding, kmer_size, partition_count);
         (*counts[current_kmer_partition])[current_kmer_encoding]++;
 
-        if((*counts[current_kmer_partition]).size() >= HASHMAP_MAX_SIZE){
-          struct writerArguments * this_writer_argument;
+        if ((*counts[current_kmer_partition]).size() >= HASHMAP_MAX_SIZE)
+        {
+          struct writerArguments *this_writer_argument;
           this_writer_argument = new writerArguments;
           this_writer_argument->partition = current_kmer_partition;
           this_writer_argument->counts = counts[current_kmer_partition];
-        
+
           writer_queue->push(this_writer_argument);
 
           custom_dense_hash_map *tmp = new custom_dense_hash_map;

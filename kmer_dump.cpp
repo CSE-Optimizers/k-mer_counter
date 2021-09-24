@@ -107,15 +107,16 @@ void dumpHashmap(custom_dense_hash_map hashMap, int partition, int partitionFile
   fclose(fp);
 }
 
-void loadHashMap(custom_dense_hash_map *hashMap, int partition, string base_path)
+void loadHashMap(custom_dense_hash_map *hashMap, int partition, int file_index, string base_path)
 {
-  string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";
+  string file_path = base_path + DIRECTORY_SEP + to_string(partition) + DIRECTORY_SEP + to_string(file_index) + ".data";
   FILE *fp = fopen(file_path.c_str(), "r");
 
   if (fp)
   {
     (*hashMap).unserialize(StringToIntSerializer(), fp);
-    fclose(fp);std::system(("mkdir -p "+ base_path).c_str());
+    fclose(fp);
+    // std::system(("mkdir -p " + base_path).c_str());
   }
 }
 
@@ -124,7 +125,7 @@ void loadHashMap(custom_dense_hash_map *hashMap, int partition, string base_path
 */
 void saveHashMap(custom_dense_hash_map *hashMap, int partition, string base_path)
 {
-  std::system(("mkdir -p "+ base_path).c_str());
+  std::system(("mkdir -p " + base_path).c_str());
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";
   FILE *fp = fopen(file_path.c_str(), "w");
 
