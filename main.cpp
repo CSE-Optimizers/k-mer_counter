@@ -90,13 +90,13 @@ int main(int argc, char *argv[])
 
   boost::lockfree::queue<struct writerArguments*> writer_queue(10);
 
-  cout << "rank = " << rank << endl;
+  // cout << "rank = " << rank << endl;
 
   // std::system(("rm -rf " + output_file_path).c_str());
 
   if (rank == 0)
   {
-    cout << "total processes = " << num_tasks << endl;
+    // cout << "total processes = " << num_tasks << endl;
     // Calculating total file size
     struct stat data_file_stats;
     if (stat(file_name, &data_file_stats) != 0)
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     }
 
     const size_t total_size = data_file_stats.st_size;
-    cout << "Total file size in bytes = " << total_size << endl;
+    // cout << "Total file size in bytes = " << total_size << endl;
     const uint64_t chunk_size = total_size / SEGMENT_COUNT;
 
     int node_rank;
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
     for (int j =1; j < num_tasks; j++) {
       MPI_Recv(&node_rank, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-      cout << "Finish Sending Allocations to "  << node_rank << endl; 
+      // cout << "Finish Sending Allocations to "  << node_rank << endl; 
 
       segmentData[0]=0;
       segmentData[1]=0;
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
   // Counting step starts from here
   FILE *file = fopen(file_name, "r");
 
-  if (rank > 0) {
+  if (rank > 1) {
 
     Counter counter(kmer_size, READ_BUFFER_SIZE, READ_QUEUE_SIZE, &writer_queue, PARTITION_COUNT);
     Writer writer("data", &writer_queue, PARTITION_COUNT, rank, output_file_path);
@@ -181,13 +181,13 @@ int main(int argc, char *argv[])
         break;
       }
 
-      cout << rank <<" Current Allocations : " << currentAllocations[0] << endl;
+      // cout << rank <<" Current Allocations : " << currentAllocations[0] << endl;
 
       uint64_t my_offset = currentAllocations[0];
       uint64_t my_revised_offset = my_offset;
       uint64_t my_allocated_size = currentAllocations[1];
 
-      cout << "my (" << rank << ")\t offset = " << my_offset << "\t chunk_size = " << my_allocated_size << endl;
+      // cout << "my (" << rank << ")\t offset = " << my_offset << "\t chunk_size = " << my_allocated_size << endl;
 
       memset(read_buffer, 0, READ_BUFFER_SIZE * (sizeof read_buffer[0]));
 
@@ -229,6 +229,8 @@ int main(int argc, char *argv[])
         char *read_buffer2 = (char *)malloc((READ_BUFFER_SIZE + 1) * sizeof(char));
         current_chunk_size = fread(read_buffer2, sizeof(char), READ_BUFFER_SIZE, file);
 
+        
+
         struct counterArguments *args = (struct counterArguments *)malloc(sizeof(struct counterArguments));
         args->allowed_length = (processed + current_chunk_size) <= remaining ? current_chunk_size : remaining - processed;
         args->buffer = read_buffer2;
@@ -264,10 +266,119 @@ int main(int argc, char *argv[])
     writer.explicitStop();
     printf("\n");
   }
+
+  if (rank == 1) {
+
+    Counter counter(kmer_size, READ_BUFFER_SIZE, READ_QUEUE_SIZE, &writer_queue, PARTITION_COUNT);
+    Writer writer("data", &writer_queue, PARTITION_COUNT, rank, output_file_path);
+
+    // int tag = 0;
+    // clock_t t;
+    int currentAllocations[2];
+    // int nextAllocations[2];
+
+    // MPI_Send(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    // MPI_Recv(currentAllocations, 2, MPI_INT, 0, 1, MPI_COMM_WORLD, &s);
+    
+    while(true) {
+      MPI_Send(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+      MPI_Recv(currentAllocations, 2, MPI_INT, 0, 1, MPI_COMM_WORLD, &s);
+
+      if (currentAllocations[1] == 0) {
+        break;
+      }
+
+      // cout << rank <<" Current Allocations : " << currentAllocations[0] << endl;
+
+      uint64_t my_offset = currentAllocations[0];
+      uint64_t my_revised_offset = my_offset;
+      uint64_t my_allocated_size = currentAllocations[1];
+
+      // cout << "my (" << rank << ")\t offset = " << my_offset << "\t chunk_size = " << my_allocated_size << endl;
+
+      memset(read_buffer, 0, READ_BUFFER_SIZE * (sizeof read_buffer[0]));
+
+      if (my_offset > 0)
+      {
+        fseek(file, my_offset - 1, SEEK_SET);
+        char temp_char = fgetc(file);
+        if (temp_char != '\n')
+        {
+          // now were are in the middle of a line
+          // just do fgets and ignore the current line.
+          // that line will be processed by the previous rank process.
+          fgets(read_buffer, READ_BUFFER_SIZE, file);
+          // cout << "ignored first line = \"" << read_buffer << "\"" << endl;
+          my_revised_offset = ftell(file);
+        }
+      }
+
+      enum LineType first_line_type = getLineType(file);
+
+      //return to revised starting point
+      fseek(file, my_revised_offset, SEEK_SET);
+
+      // adjust range size due to ignoring the first line
+      const size_t remaining = my_allocated_size - (my_revised_offset - my_offset);
+      size_t processed = 0;
+      size_t current_chunk_size = 0;
+      uint64_t log_counter = 0;
+
+      // cout << "Hello" << endl;
+      while (processed <= remaining && !feof(file))
+      {
+        
+        log_counter++;
+        // if (log_counter % 1000 == 0)
+        // {
+        //   cout << rank << " " << 100 * (ftell(file) - my_offset) / ((double)my_allocated_size) << "%\n";
+        // }
+        char *read_buffer2 = (char *)malloc((READ_BUFFER_SIZE + 1) * sizeof(char));
+        current_chunk_size = fread(read_buffer2, sizeof(char), READ_BUFFER_SIZE, file);
+
+        // cout << read_buffer2 << endl;
+
+        struct counterArguments *args = (struct counterArguments *)malloc(sizeof(struct counterArguments));
+        args->allowed_length = (processed + current_chunk_size) <= remaining ? current_chunk_size : remaining - processed;
+        args->buffer = read_buffer2;
+        args->first_line_type = first_line_type;
+
+        counter.enqueue(args);
+
+        processed += current_chunk_size;
+      }
+
+      // return to one character before the end of allocated range
+      fseek(file, my_offset + my_allocated_size - 1, SEEK_SET);
+      char temp_char = 0;
+      temp_char = fgetc(file);
+      if (temp_char != '\n')
+      {
+        // we are in the middle of a line
+        // process the remaining part of the line
+
+        // cout << "\nrading the remaining part of the last line \n";
+        char *read_buffer2 = (char *)malloc((READ_BUFFER_SIZE + 1) * sizeof(char));
+        fgets(read_buffer2, READ_BUFFER_SIZE, file);
+
+        struct counterArguments *args = (struct counterArguments *)malloc(sizeof(struct counterArguments));
+        args->allowed_length = strlen(read_buffer);
+        args->buffer = read_buffer2;
+        args->first_line_type = first_line_type;
+
+        counter.enqueue(args);
+      }
+    } 
+    counter.explicitStop();
+    writer.explicitStop();
+    printf("\n");
+  }
+
+
   fclose(file);
-  std::cout << "finalizing.." << rank << std::endl;
+  // std::cout << "finalizing.." << rank << std::endl;
   MPI_Finalize();
-  std::cout << "done.." << rank << std::endl;
+  // std::cout << "done.." << rank << std::endl;
   return 0;
 }
 
