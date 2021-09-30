@@ -39,3 +39,6 @@ output.txt
 
 # IDE data
 .vscode
+
+# Folders
+/data
