@@ -13,6 +13,7 @@ struct counterArguments
     char *buffer;
     uint64_t allowed_length;
     enum LineType first_line_type;
+    bool reset_status;
 };
 
 class ThreadSafeQueue

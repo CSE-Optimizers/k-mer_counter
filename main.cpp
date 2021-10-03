@@ -127,6 +127,7 @@ int main(int argc, char *argv[])
       }
       MPI_Send(segmentData, 2, MPI_INT, node_rank, 1, MPI_COMM_WORLD);
       i++;
+      cout <<"overall progress : " << 100 * i / ((double)SEGMENT_COUNT) << "%\n";
     }
   
     for (int j =1; j < num_tasks; j++) {
@@ -134,7 +135,7 @@ int main(int argc, char *argv[])
       segmentData[0]=0;
       segmentData[1]=0;
       MPI_Send(segmentData, 2, MPI_INT, node_rank, 1, MPI_COMM_WORLD);
-      // cout << "Finish Sending Allocations to "  << node_rank << endl; 
+      cout << "Finish Sending Allocations to "  << node_rank << endl; 
     }
 
     // for (int process_i = 1; process_i < num_tasks; process_i++)
@@ -183,7 +184,7 @@ int main(int argc, char *argv[])
         break;
       }
 
-      cout << rank <<" Current Allocations : " << currentAllocations[0] << endl;
+      // cout << rank <<" Current Allocations : " << currentAllocations[0] << endl;
 
       uint64_t my_offset = currentAllocations[0];
       uint64_t my_revised_offset = my_offset;
@@ -217,17 +218,12 @@ int main(int argc, char *argv[])
       const size_t remaining = my_allocated_size - (my_revised_offset - my_offset);
       size_t processed = 0;
       size_t current_chunk_size = 0;
-      uint64_t log_counter = 0;
+      bool reset_status = true;
 
       // cout << "Hello" << endl;
       while (processed <= remaining && !feof(file))
       {
         
-        log_counter++;
-        if (log_counter % 1000 == 0)
-        {
-          cout << rank << " " << 100 * (ftell(file) - my_offset) / ((double)my_allocated_size) << "%\n";
-        }
         char *read_buffer2 = (char *)malloc((READ_BUFFER_SIZE + 1) * sizeof(char));
         current_chunk_size = fread(read_buffer2, sizeof(char), READ_BUFFER_SIZE, file);
 
@@ -235,8 +231,10 @@ int main(int argc, char *argv[])
         args->allowed_length = (processed + current_chunk_size) <= remaining ? current_chunk_size : remaining - processed;
         args->buffer = read_buffer2;
         args->first_line_type = first_line_type;
+        args->reset_status = reset_status;
 
         counter.enqueue(args);
+        reset_status = false;
 
         processed += current_chunk_size;
       }
@@ -258,6 +256,7 @@ int main(int argc, char *argv[])
         args->allowed_length = strlen(read_buffer);
         args->buffer = read_buffer2;
         args->first_line_type = first_line_type;
+        args->reset_status = reset_status;
 
         counter.enqueue(args);
       }

@@ -61,7 +61,7 @@ void Counter::start()
                         buffer_size,
                         args->allowed_length,
                         args->first_line_type,
-                        true, counts, partition_count, writer_queue);
+                        args->reset_status, counts, partition_count, writer_queue);
 
                     free(args->buffer);
                     free(args);

@@ -164,21 +164,23 @@ void countKmersFromBufferWithPartitioning(
     const uint64_t buffer_size,
     const uint64_t allowed_length,
     const enum LineType first_line_type,
-    const bool is_starting_from_line_middle,
+    const bool reset_status,
     custom_dense_hash_map **counts,
     int partition_count,
     boost::lockfree::queue<struct writerArguments *> *writer_queue)
 {
-  static bool line_type_identified = false;
-  static enum LineType current_line_type;
-  if (!line_type_identified)
-  {
-    current_line_type = first_line_type;
-    line_type_identified = true;
-  }
 
+  static enum LineType current_line_type;
   static uint64_t current_kmer_encoding = 0;
   static uint64_t kmer_filled_length = 0;
+  if (reset_status)
+  {
+    current_line_type = first_line_type;
+    current_kmer_encoding = 0;
+    kmer_filled_length = 0;
+  }
+
+
   uint64_t current_character_encoding = 0;
 
   const uint64_t bit_clear_mask = ~(((uint64_t)3) << (kmer_size * 2));

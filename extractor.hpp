@@ -29,7 +29,7 @@ void countKmersFromBufferWithPartitioning(
     const uint64_t buffer_size,
     const uint64_t allowed_length,
     const enum LineType first_line_type,
-    const bool is_starting_from_line_middle,
+    const bool reset_status,
     custom_dense_hash_map **counts,
     int partition_count,
     boost::lockfree::queue<struct writerArguments *> *writer_queue);
