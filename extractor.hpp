@@ -4,14 +4,6 @@
 #include "utils.hpp"
 #include <boost/lockfree/queue.hpp>
 
-enum LineType
-{
-  FIRST_IDENTIFIER_LINE = 0,
-  SEQUENCE_LINE = 1,
-  SECOND_IDENTIFIER_LINE = 2,
-  QUALITY_LINE = 3
-};
-
 enum LineType getLineType(FILE *fp);
 
 void countKmersFromBuffer(

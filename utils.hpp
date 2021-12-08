@@ -31,4 +31,20 @@ struct FileChunkData{
   char chunk_buffer[]; 
 };
 
+enum LineType
+{
+  FIRST_IDENTIFIER_LINE = 0,
+  SEQUENCE_LINE = 1,
+  SECOND_IDENTIFIER_LINE = 2,
+  QUALITY_LINE = 3
+};
+
+struct CounterArguments
+{
+    char *buffer;
+    uint64_t allowed_length;
+    enum LineType first_line_type;
+    bool reset_status;
+};
+
 #endif

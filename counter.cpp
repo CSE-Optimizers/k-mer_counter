@@ -32,7 +32,7 @@ Counter::~Counter()
         stop();
 }
 
-void Counter::enqueue(struct counterArguments *args)
+void Counter::enqueue(struct CounterArguments *args)
 {
     q.enqueue(args);
 }
@@ -48,7 +48,7 @@ void Counter::start()
     runner = std::thread(
         [=]
         {
-            struct counterArguments *args;
+            struct CounterArguments *args;
             while (true)
             {
                 args = q.dequeue();

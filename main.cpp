@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
       memcpy(data_buffer, file_chunk_data->chunk_buffer, total_max_buffer_size); //copy to a new buffer
 
 
-      struct counterArguments *args = (struct counterArguments *)malloc(sizeof(struct counterArguments));
+      struct CounterArguments *args = (struct CounterArguments *)malloc(sizeof(struct CounterArguments));
       args->allowed_length = total_max_buffer_size;
       args->buffer = data_buffer;
       args->first_line_type = LineType(file_chunk_data->first_line_type);

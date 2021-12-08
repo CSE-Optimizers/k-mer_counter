@@ -18,13 +18,13 @@ public:
 
     ~Counter();
 
-    void enqueue(struct counterArguments *args);
+    void enqueue(struct CounterArguments *args);
 
     void explicitStop();
 
 private:
     std::thread runner;
-    ThreadSafeQueue q;
+    ThreadSafeQueue <struct CounterArguments> q;
     bool finished = false;
     uint64_t k;
     uint64_t buffer_size;
