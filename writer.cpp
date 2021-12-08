@@ -49,7 +49,7 @@ void Writer::start()
                 if(pop_success){
                     // std::cout<<"Successful pop"<<std::endl;
                     // string save_directory_base_path = "data/"+ std::to_string(args->partition);
-                    // saveHashMap(args->counts, file_counts[args->partition], "data/"+ std::to_string(args->partition));
+                    // saveHashMap(args->counts, file_counts[args->partition], "/home/damika/Documents/test_results/data/"+ std::to_string(args->partition));
                     saveHashMap(args->counts, file_counts[args->partition], base_path + std::to_string(args->partition));
                    
                     file_counts[args->partition]++;

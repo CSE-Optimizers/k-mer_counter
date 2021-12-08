@@ -188,6 +188,10 @@ void countKmersFromBufferWithPartitioning(
 
   for (uint64_t buffer_i = 0; buffer_i < allowed_length; buffer_i++)
   {
+    if (buffer[buffer_i] == 0)
+    {
+      break;
+    }
     if (buffer[buffer_i] == '\n')
     {
       current_line_type = LineType((current_line_type + 1) % 4);

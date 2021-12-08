@@ -26,4 +26,9 @@ struct writerArguments{
     custom_dense_hash_map *counts;
 };
 
+struct FileChunkData{
+  int32_t first_line_type;
+  char chunk_buffer[]; 
+};
+
 #endif
