@@ -23,13 +23,15 @@
 #include "counter.hpp"
 #include "thread_safe_queue.hpp"
 #include "writer.hpp"
+#include "file_reader.hpp"
 
 // #define READ_BUFFER_SIZE 0x1000
 #define HASH_MAP_MAX_SIZE 0x1000000
 #define DUMP_SIZE 10
 #define READ_QUEUE_SIZE 10
+#define MASTER_FILE_QUEUE_SIZE 40
 #define PARTITION_COUNT 10
-#define SEGMENT_COUNT 0x100
+#define SEGMENT_COUNT 0x400
 #define MAX_LINE_LENGTH 2050
 
 static inline __attribute__((always_inline)) void getKmerFromIndex(const int kmer_size, const uint64_t index, char *out_buffer)
@@ -67,9 +69,7 @@ static inline __attribute__((always_inline)) void getKmerFromIndex(const int kme
   return;
 }
 
-float time_diffs2(struct timeval *start, struct timeval *end) {
-  return (end->tv_sec - start->tv_sec) + 1e-6*(end->tv_usec - start->tv_usec);
-};
+
 
 int main(int argc, char *argv[])
 {
@@ -91,7 +91,6 @@ int main(int argc, char *argv[])
   MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Status s;
-  // uint64_t offset_data[num_tasks][2]; //offset and allocated size for this process (in bytes)
 
   int namelen;
   char processor_name[MPI_MAX_PROCESSOR_NAME];
@@ -130,52 +129,41 @@ int main(int argc, char *argv[])
   // std::cout << "(" << rank << ") total_max_buffer_size = " << total_max_buffer_size << std::endl;
 
   if (rank == 0){
+    ThreadSafeQueue <struct FileChunkData> master_file_queue;
+    master_file_queue.setLimit(MASTER_FILE_QUEUE_SIZE);
 
-    FILE *file = fopen(file_name, "r");
+
+    FileReader fileReader(file_name, chunk_size, total_max_buffer_size, MAX_LINE_LENGTH, &master_file_queue);
+
 
     int node_rank;
 
-    struct FileChunkData* file_chunk_data = (struct FileChunkData*)malloc(sizeof(int32_t)+total_max_buffer_size*sizeof(char));
-    uint64_t file_position_before_reading;
-    uint64_t current_chunk_size;
+    struct FileChunkData* file_chunk_data;
+
     uint64_t log_counter = 0;
-    while (!feof(file)){
-      gettimeofday(&start_time,NULL);
+    while (true){
 
-      file_position_before_reading = ftell(file);
-      file_chunk_data->first_line_type = getLineType(file);    // this function changes the file pointer position
-      fseek(file, file_position_before_reading, SEEK_SET);  // reset the file pointer
-      memset(file_chunk_data->chunk_buffer, 0, total_max_buffer_size);
-      current_chunk_size = fread(file_chunk_data->chunk_buffer, sizeof(char), chunk_size, file);   
-      fgets(&(file_chunk_data->chunk_buffer[current_chunk_size]), MAX_LINE_LENGTH, file);  // read the remaining part of the last line of the chunk
-      current_chunk_size += strlen(&(file_chunk_data->chunk_buffer[current_chunk_size]));
+      file_chunk_data = master_file_queue.dequeue();
+      if(file_chunk_data!=NULL){
+        MPI_Recv(&node_rank, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Send(file_chunk_data, sizeof(int32_t)+total_max_buffer_size*sizeof(char), MPI_BYTE, node_rank, 1, MPI_COMM_WORLD);
+        free(file_chunk_data);
+        log_counter++;
+        cout <<"overall progress : " << 100 * log_counter / ((double)(SEGMENT_COUNT)) << "%\n";
 
-      gettimeofday(&end_time,NULL);
-      total_time_to_read+=time_diffs2(&start_time, &end_time);
-
-      if(file_chunk_data->chunk_buffer[total_max_buffer_size-1]!=0){
-        std::cerr << "Buffer overflow when reading lines" << std::endl;
-        exit(EXIT_FAILURE);
       }
 
-      MPI_Recv(&node_rank, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      gettimeofday(&start_time,NULL);
-      MPI_Send(file_chunk_data, sizeof(int32_t)+total_max_buffer_size*sizeof(char), MPI_BYTE, node_rank, 1, MPI_COMM_WORLD);
-      gettimeofday(&end_time,NULL);
-      total_time_to_communicate+=time_diffs2(&start_time, &end_time);
-      // cout << "time to send = " <<  total_time<< endl;
-      // cout << "sending to "<< node_rank << endl;
 
-      // std::cout << "sent line type = " << file_chunk_data->first_line_type << std::endl;
-      log_counter++;
-      // if (log_counter % 100 == 0)
-      // {
-        cout <<"overall progress : " << 100 * ftell(file) / ((double)(chunk_size*SEGMENT_COUNT)) << "%\n";
-      // }
+      if (fileReader.isCompleted() && master_file_queue.isEmpty())
+      {
+          break;
+      }
       
     }
+    fileReader.finish();
 
     // send empty buffer as the last message
+    file_chunk_data= (struct FileChunkData*)malloc(sizeof(int32_t)+total_max_buffer_size*sizeof(char));
     memset(file_chunk_data->chunk_buffer, 0, total_max_buffer_size);
 
   
@@ -185,9 +173,10 @@ int main(int argc, char *argv[])
 
       cout << "Finish Sending Allocations to "  << node_rank << endl; 
     }
-    fclose(file);
-    cout << "total time to read = " <<  total_time_to_read<< endl;
-    cout << "total time to communicate = " <<  total_time_to_communicate<< endl;
+    free(file_chunk_data);
+
+    // cout << "total time to read = " <<  total_time_to_read<< endl;
+    // cout << "total time to communicate = " <<  total_time_to_communicate<< endl;
 
   }
 
@@ -198,7 +187,7 @@ int main(int argc, char *argv[])
     Counter counter(kmer_size, total_max_buffer_size, READ_QUEUE_SIZE, &writer_queue, PARTITION_COUNT);
     Writer writer("data", &writer_queue, PARTITION_COUNT, rank, output_file_path);
 
-    // int currentAllocations[2];
+
     struct FileChunkData* file_chunk_data;
 
 
