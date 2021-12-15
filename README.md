@@ -9,7 +9,11 @@ Compile with
 
 Run command
 
-```mpirun ./kmer_counter.out path/to/datafile k_value```
+```mpirun ./kmer_counter.out path/to/datafile k_value path/to/output/folder/```
+
+Example
+
+```mpirun -np 16 --hostfile hostfile.txt ./test/k-mer_counter_master_file_read/kmer_counter.out vesca.fastq 28 /home/damika/Documents/test_results/data/```
 
 
 ----

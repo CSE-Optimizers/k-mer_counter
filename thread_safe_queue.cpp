@@ -5,14 +5,19 @@
 
 #include "thread_safe_queue.hpp"
 
-ThreadSafeQueue::ThreadSafeQueue() {}
+template <class T>
+ThreadSafeQueue<T>::ThreadSafeQueue() {}
 
-void ThreadSafeQueue::setLimit(int value)
+
+template <class T>
+void ThreadSafeQueue<T>::setLimit(int value)
 {
     limit = value;
 }
 
-void ThreadSafeQueue::enqueue(struct counterArguments *item)
+
+template <class T>
+void ThreadSafeQueue<T>::enqueue(T *item)
 {
     // std::cout << "Hello" << std::endl;
     std::unique_lock<std::mutex> lock(mu);
@@ -25,11 +30,13 @@ void ThreadSafeQueue::enqueue(struct counterArguments *item)
     lock.unlock();
 }
 
-struct counterArguments *ThreadSafeQueue::dequeue()
+
+template <class T>
+T *ThreadSafeQueue<T>::dequeue()
 {
     // std::cout << "World" << std::endl;
     std::unique_lock<std::mutex> lock(mu);
-    struct counterArguments *out = NULL;
+    T *out = NULL;
     if (!q.empty())
     {
         out = q.front();
@@ -41,10 +48,21 @@ struct counterArguments *ThreadSafeQueue::dequeue()
     return out;
 }
 
-bool ThreadSafeQueue::isEmpty()
+
+template <class T>
+bool ThreadSafeQueue<T>::isEmpty()
 {
     std::unique_lock<std::mutex> lock(mu);
     bool val = q.empty();
     lock.unlock();
     return val;
 }
+
+
+// this is to fix linker errors
+// if you're using ThreadSafeQueue class, add the relevant template instance as a new line
+// example: template class ThreadSafeQueue<YourClassHere>;
+
+template class ThreadSafeQueue<struct CounterArguments>;
+template class ThreadSafeQueue<struct FileChunkData>;
+

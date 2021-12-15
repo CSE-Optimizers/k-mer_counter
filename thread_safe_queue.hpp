@@ -8,13 +8,8 @@
 
 #include "extractor.hpp"
 
-struct counterArguments
-{
-    char *buffer;
-    uint64_t allowed_length;
-    enum LineType first_line_type;
-};
 
+template <class T>
 class ThreadSafeQueue
 {
 
@@ -23,14 +18,14 @@ public:
 
     void setLimit(int value);
 
-    void enqueue(struct counterArguments *item);
+    void enqueue(T *item);
 
-    struct counterArguments* dequeue();
+    T* dequeue();
 
     bool isEmpty();
 
 private:
-    std::queue<struct counterArguments*> q;
+    std::queue<T*> q;
     std::condition_variable condition;
     std::mutex mu;
     int count = 0;

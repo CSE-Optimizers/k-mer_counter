@@ -1,16 +1,15 @@
-CC = mpiCC
+CC = mpic++
 CPPFLAGS = -Wall
-CXXFLAGS = -std=c++11 -pthread
+CXXFLAGS = -O2 -std=c++11 -pthread -I /home/damika/boost-1.77.0/built/include  -L/home/damika/boost-1.77.0/built/lib -lboost_thread -lboost_system
 RM = rm
 
 # Path to sparsehash src
-USER_LIBS = -I /home/ruchin/sparsehash-sparsehash-2.0.4/src 
+USER_LIBS = -I /home/damika/cloud/programs/sparsehash-sparsehash-2.0.4/src 
 
+main: main.o extractor.o com.o kmer_dump.o utils.hpp MurmurHash2.o thread_safe_queue.o counter.o writer.o file_reader.o
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o kmer_counter.out main.o extractor.o com.o kmer_dump.o MurmurHash2.o thread_safe_queue.o counter.o writer.o file_reader.o $(USER_LIBS)
 
-main: main.o extractor.o com.o kmer_dump.o utils.hpp MurmurHash2.o thread_safe_queue.o counter.o 
-	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o kmer_counter.out main.o extractor.o com.o kmer_dump.o MurmurHash2.o thread_safe_queue.o counter.o $(USER_LIBS)
-
-main.o: main.cpp extractor.hpp com.hpp kmer_dump.hpp utils.hpp counter.hpp thread_safe_queue.hpp
+main.o: main.cpp extractor.hpp com.hpp kmer_dump.hpp utils.hpp counter.hpp thread_safe_queue.hpp writer.hpp file_reader.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c main.cpp $(USER_LIBS)
 
 extractor.o: extractor.cpp extractor.hpp utils.hpp
@@ -18,6 +17,9 @@ extractor.o: extractor.cpp extractor.hpp utils.hpp
 
 com.o: com.cpp com.hpp utils.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c com.cpp $(USER_LIBS)
+
+writer.o: writer.cpp writer.hpp utils.hpp kmer_dump.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c writer.cpp $(USER_LIBS)
 
 thread_safe_queue.o: thread_safe_queue.cpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c thread_safe_queue.cpp $(USER_LIBS)
@@ -36,6 +38,9 @@ kmer_dump.o: kmer_dump.cpp kmer_dump.hpp utils.hpp
 
 MurmurHash2.o: MurmurHash2.cpp MurmurHash2.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c MurmurHash2.cpp $(USER_LIBS)
+
+file_reader.o: file_reader.cpp file_reader.hpp extractor.hpp utils.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c file_reader.cpp $(USER_LIBS)
 
 clean: 
 	$(RM) *.o kmer_counter.out 
