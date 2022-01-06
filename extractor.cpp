@@ -170,15 +170,15 @@ void countKmersFromBufferWithPartitioning(
     boost::lockfree::queue<struct writerArguments *> *writer_queue)
 {
 
-  static enum LineType current_line_type;
-  static uint64_t current_kmer_encoding = 0;
-  static uint64_t kmer_filled_length = 0;
-  if (reset_status)
-  {
-    current_line_type = first_line_type;
-    current_kmer_encoding = 0;
-    kmer_filled_length = 0;
-  }
+  // static enum LineType current_line_type;
+  uint64_t current_kmer_encoding = 0;
+  uint64_t kmer_filled_length = 0;
+  // if (reset_status)
+  // {
+  //   current_line_type = first_line_type;
+  //   current_kmer_encoding = 0;
+  //   kmer_filled_length = 0;
+  // }
 
 
   uint64_t current_character_encoding = 0;
@@ -194,15 +194,15 @@ void countKmersFromBufferWithPartitioning(
     }
     if (buffer[buffer_i] == '\n')
     {
-      current_line_type = LineType((current_line_type + 1) % 4);
+      // current_line_type = LineType((current_line_type + 1) % 4);
       current_kmer_encoding = 0;
       kmer_filled_length = 0;
       continue;
     }
-    if (current_line_type != SEQUENCE_LINE)
-    {
-      continue;
-    }
+    // if (current_line_type != SEQUENCE_LINE)
+    // {
+    //   continue;
+    // }
 
     kmer_filled_length++;
 

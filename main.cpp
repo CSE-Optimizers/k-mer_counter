@@ -29,10 +29,11 @@
 #define HASH_MAP_MAX_SIZE 0x1000000
 #define DUMP_SIZE 10
 #define READ_QUEUE_SIZE 10
-#define MASTER_FILE_QUEUE_SIZE 40
+#define MASTER_FILE_QUEUE_SIZE 400
 #define PARTITION_COUNT 10
-#define SEGMENT_COUNT 0x400
-#define MAX_LINE_LENGTH 2050
+// #define SEGMENT_COUNT 0x400
+#define COM_BUFFER_SIZE 0x40000    //0x40000 = 256KB
+#define MAX_LINE_LENGTH 103000
 
 static inline __attribute__((always_inline)) void getKmerFromIndex(const int kmer_size, const uint64_t index, char *out_buffer)
 {
@@ -103,8 +104,9 @@ int main(int argc, char *argv[])
   // std::cout << "rank = " << rank << " Node: " << processor_name << std::endl;
 
   std::system(("rm -rf "+output_file_path +"*/*.data").c_str());
-  uint64_t total_max_buffer_size;
   uint64_t chunk_size;
+  size_t total_file_size;
+  size_t com_buffer_size = COM_BUFFER_SIZE;
 
   if (rank == 0)
   {
@@ -116,40 +118,39 @@ int main(int argc, char *argv[])
       exit(EXIT_FAILURE);
     }
 
-    const size_t total_size = data_file_stats.st_size;
-    std::cout << "Total file size in bytes = " << total_size << std::endl;
-    chunk_size = total_size / SEGMENT_COUNT;
-    total_max_buffer_size = chunk_size + MAX_LINE_LENGTH + 1;
-    std::cout << "Max buffer size = " << total_max_buffer_size << std::endl;
+    total_file_size = data_file_stats.st_size;
+    std::cout << "Total file size in bytes = " << total_file_size << std::endl;
+
+    // std::cout << "Com buffer size =  " << com_buffer_size/1024 << " KB" << std::endl;
 
   }
 
   // send the calculated segment size
-  MPI_Bcast(&total_max_buffer_size, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
-  // std::cout << "(" << rank << ") total_max_buffer_size = " << total_max_buffer_size << std::endl;
+  MPI_Bcast(&com_buffer_size, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+  std::cout << "(" << rank << ") com buffer size = " << com_buffer_size << std::endl;
 
   if (rank == 0){
-    ThreadSafeQueue <struct FileChunkData> master_file_queue;
+    ThreadSafeQueue <char> master_file_queue;
     master_file_queue.setLimit(MASTER_FILE_QUEUE_SIZE);
 
 
-    FileReader fileReader(file_name, chunk_size, total_max_buffer_size, MAX_LINE_LENGTH, &master_file_queue);
+    FileReader fileReader(file_name, COM_BUFFER_SIZE, MAX_LINE_LENGTH, &master_file_queue, total_file_size);
 
 
     int node_rank;
 
-    struct FileChunkData* file_chunk_data;
+    char* send_buffer;
 
     uint64_t log_counter = 0;
     while (true){
 
-      file_chunk_data = master_file_queue.dequeue();
-      if(file_chunk_data!=NULL){
+      send_buffer = master_file_queue.dequeue();
+      if(send_buffer != NULL){
         MPI_Recv(&node_rank, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Send(file_chunk_data, sizeof(int32_t)+total_max_buffer_size*sizeof(char), MPI_BYTE, node_rank, 1, MPI_COMM_WORLD);
-        free(file_chunk_data);
+        MPI_Send(send_buffer, COM_BUFFER_SIZE, MPI_BYTE, node_rank, 1, MPI_COMM_WORLD);
+        free(send_buffer);
         log_counter++;
-        cout <<"overall progress : " << 100 * log_counter / ((double)(SEGMENT_COUNT)) << "%\n";
+        // cout <<"overall progress : " << 100 * log_counter / ((double)(SEGMENT_COUNT)) << "%\n";
 
       }
 
@@ -163,17 +164,17 @@ int main(int argc, char *argv[])
     fileReader.finish();
 
     // send empty buffer as the last message
-    file_chunk_data= (struct FileChunkData*)malloc(sizeof(int32_t)+total_max_buffer_size*sizeof(char));
-    memset(file_chunk_data->chunk_buffer, 0, total_max_buffer_size);
+    send_buffer = (char* )malloc(COM_BUFFER_SIZE);
+    memset(send_buffer, 0, COM_BUFFER_SIZE);
 
   
     for (int j =1; j < num_tasks; j++) {
       MPI_Recv(&node_rank, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Send(file_chunk_data, sizeof(int32_t)+total_max_buffer_size*sizeof(char), MPI_BYTE, node_rank, 1, MPI_COMM_WORLD);
+      MPI_Send(send_buffer, COM_BUFFER_SIZE, MPI_BYTE, node_rank, 1, MPI_COMM_WORLD);
 
       cout << "Finish Sending Allocations to "  << node_rank << endl; 
     }
-    free(file_chunk_data);
+    free(send_buffer);
 
     // cout << "total time to read = " <<  total_time_to_read<< endl;
     // cout << "total time to communicate = " <<  total_time_to_communicate<< endl;
@@ -183,40 +184,43 @@ int main(int argc, char *argv[])
   
   if (rank > 0)
   {
-    std::cout << "(" << rank << ") total_max_buffer_size = " << total_max_buffer_size << std::endl;
-    Counter counter(kmer_size, total_max_buffer_size, READ_QUEUE_SIZE, &writer_queue, PARTITION_COUNT);
+    std::cout << "(" << rank << ") com buffer size = " << com_buffer_size/1024 << " KB" << std::endl;
+    Counter counter(kmer_size, com_buffer_size, READ_QUEUE_SIZE, &writer_queue, PARTITION_COUNT);
     Writer writer("data", &writer_queue, PARTITION_COUNT, rank, output_file_path);
 
 
-    struct FileChunkData* file_chunk_data;
+    char* recv_buffer;
+    
 
 
     while(true) {
-      file_chunk_data = (struct FileChunkData*)malloc(sizeof(int32_t)+total_max_buffer_size*sizeof(char));
+      recv_buffer = (char* )malloc(com_buffer_size);
+      assert(recv_buffer);
       MPI_Send(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-      MPI_Recv(file_chunk_data, sizeof(int32_t)+total_max_buffer_size*sizeof(char), MPI_BYTE, 0, 1, MPI_COMM_WORLD, &s);
+      MPI_Recv(recv_buffer, com_buffer_size, MPI_BYTE, 0, 1, MPI_COMM_WORLD, &s);
 
-      if (file_chunk_data->chunk_buffer[0] == 0) {
+      if (recv_buffer[0] == 0) {
         // last empty message received
         break;
       }
 
         
-      char *data_buffer = (char *)malloc(total_max_buffer_size * sizeof(char));
-      memcpy(data_buffer, file_chunk_data->chunk_buffer, total_max_buffer_size); //copy to a new buffer
+      // char *data_buffer = (char *)malloc(total_max_buffer_size * sizeof(char));
+      // memcpy(data_buffer, file_chunk_data->chunk_buffer, total_max_buffer_size); //copy to a new buffer
 
 
       struct CounterArguments *args = (struct CounterArguments *)malloc(sizeof(struct CounterArguments));
-      args->allowed_length = total_max_buffer_size;
-      args->buffer = data_buffer;
-      args->first_line_type = LineType(file_chunk_data->first_line_type);
+      args->allowed_length = com_buffer_size;
+      args->buffer = recv_buffer;
+      // args->first_line_type = NULL;
       args->reset_status = true;
 
       counter.enqueue(args);
-      free(file_chunk_data);
+      // free(file_chunk_data);
 
       
     } 
+    free(recv_buffer);
     counter.explicitStop();
     writer.explicitStop();
     printf("\n");

@@ -9,8 +9,8 @@
 class FileReader
 {
 public:
-    explicit FileReader(const char* file_name, uint64_t chunk_size, uint64_t max_total_size, uint64_t max_line_length,
-                     ThreadSafeQueue <struct FileChunkData> *read_chunk_queue);
+    explicit FileReader(const char* file_name, size_t max_buffer_size, size_t max_line_length,
+                     ThreadSafeQueue <char> *read_chunk_queue, size_t total_file_size);
 
     ~FileReader();
 
@@ -22,12 +22,12 @@ public:
 
 private:
     const char* file_name;
-    uint64_t chunk_size;
-    uint64_t max_total_size;
-    uint64_t max_line_length;
+    size_t max_buffer_size;
+    size_t max_line_length;
     std::thread runner;
-    ThreadSafeQueue <struct FileChunkData>* q;
+    ThreadSafeQueue <char>* q;
     bool finished = false;
+    size_t total_file_size;
     
     void start();
 
