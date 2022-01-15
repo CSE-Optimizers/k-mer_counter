@@ -71,12 +71,40 @@ static inline __attribute__((always_inline)) void getKmerFromIndex(const int kme
 }
 
 
+float time_diffs3(struct timeval *y, struct timeval *x)
+{
+    struct timeval result;
+
+    if (x->tv_usec > 999999)
+    {
+        x->tv_sec += x->tv_usec / 1000000;
+        x->tv_usec %= 1000000;
+    }
+
+    if (y->tv_usec > 999999)
+    {
+        y->tv_sec += y->tv_usec / 1000000;
+        y->tv_usec %= 1000000;
+    }
+
+    result.tv_sec = x->tv_sec - y->tv_sec;
+
+    if ((result.tv_usec = x->tv_usec - y->tv_usec) < 0)
+    {
+        result.tv_usec += 1000000;
+        result.tv_sec--; // borrow
+    }
+
+    return result.tv_sec*1.0 + (1e-6)*result.tv_usec;
+}
+
+
 
 int main(int argc, char *argv[])
 {
 
   struct timeval start_time, end_time;
-  float total_time_to_read = 0;
+
   float total_time_to_communicate = 0;
 
 
@@ -104,7 +132,7 @@ int main(int argc, char *argv[])
   // std::cout << "rank = " << rank << " Node: " << processor_name << std::endl;
 
   std::system(("rm -rf "+output_file_path +"*/*.data").c_str());
-  uint64_t chunk_size;
+
   size_t total_file_size;
   size_t com_buffer_size = COM_BUFFER_SIZE;
 
@@ -146,8 +174,12 @@ int main(int argc, char *argv[])
 
       send_buffer = master_file_queue.dequeue();
       if(send_buffer != NULL){
+        gettimeofday(&start_time,NULL);
         MPI_Recv(&node_rank, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Send(send_buffer, COM_BUFFER_SIZE, MPI_BYTE, node_rank, 1, MPI_COMM_WORLD);
+        gettimeofday(&end_time,NULL);
+        total_time_to_communicate += time_diffs3(&start_time, &end_time);
+        
         free(send_buffer);
         log_counter++;
         // cout <<"overall progress : " << 100 * log_counter / ((double)(SEGMENT_COUNT)) << "%\n";
@@ -176,8 +208,8 @@ int main(int argc, char *argv[])
     }
     free(send_buffer);
 
-    // cout << "total time to read = " <<  total_time_to_read<< endl;
-    // cout << "total time to communicate = " <<  total_time_to_communicate<< endl;
+
+    cout << "total time to communicate = " <<  total_time_to_communicate<< endl;
 
   }
 

@@ -1,5 +1,5 @@
 CC = mpic++
-CPPFLAGS = -Wall
+CPPFLAGS = -Wall -Wextra
 CXXFLAGS = -O2 -std=c++11 -pthread -I /home/damika/boost-1.78.0/built/include  -L/home/damika/boost-1.78.0/built/lib -lboost_thread -lboost_system
 RM = rm
 

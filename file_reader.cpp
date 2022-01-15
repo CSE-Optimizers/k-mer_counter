@@ -60,8 +60,8 @@ void FileReader::start()
         [=]
         {
             FILE *file = fopen(this->file_name, "r");
-            uint64_t file_position_before_reading;
-            uint64_t current_chunk_size;
+            // uint64_t file_position_before_reading;
+            // uint64_t current_chunk_size;
             size_t filled_length = 0;
             size_t current_line_length = 0;
             char* combined_buffer = (char* )malloc(this->max_buffer_size);

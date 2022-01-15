@@ -90,9 +90,33 @@ static inline __attribute__((always_inline)) uint64_t getCharacterEncoding(const
   }
 }
 
+// static inline __attribute__((always_inline)) uint64_t getComplementCharacter(uint64_t character)
+// {
+//   switch (character)
+//   {
+//   case 0:
+//     return (uint64_t)3;
+//     break;
+//   case 1:
+//     return (uint64_t)2;
+//     break;
+//   case 2:
+//     return (uint64_t)1;
+//     break;
+//   case 3:
+//     return (uint64_t)0;
+//     break;
+//   default:
+//     return (uint64_t)4;
+//     break;
+//   }
+// }
+
+
 static inline __attribute__((always_inline)) int getKmerPartition(const uint64_t kmer, int kmer_size, int partition_count)
 {
-  return kmer % partition_count;
+  // return kmer % partition_count;
+  return (kmer >> (kmer_size / 2)) % partition_count;
 }
 
 void countKmersFromBuffer(
@@ -169,9 +193,14 @@ void countKmersFromBufferWithPartitioning(
     int partition_count,
     boost::lockfree::queue<struct writerArguments *> *writer_queue)
 {
-
+ 
   // static enum LineType current_line_type;
   uint64_t current_kmer_encoding = 0;
+ 
+  // reversed complement of the current kmer
+  uint64_t current_rc_kmer_encoding = 0;
+  uint64_t canonical_kmer_encoding = 0;
+ 
   uint64_t kmer_filled_length = 0;
   // if (reset_status)
   // {
@@ -182,9 +211,11 @@ void countKmersFromBufferWithPartitioning(
 
 
   uint64_t current_character_encoding = 0;
+  uint64_t current_complement_character_encoding = 0;
 
   const uint64_t bit_clear_mask = ~(((uint64_t)3) << (kmer_size * 2));
   const uint64_t invalid_check_mask = ((uint64_t)1) << 2;
+  const uint64_t left_shift_amount = (kmer_size - 1) * 2;
 
   for (uint64_t buffer_i = 0; buffer_i < allowed_length; buffer_i++)
   {
@@ -209,17 +240,25 @@ void countKmersFromBufferWithPartitioning(
     kmer_filled_length = std::min(kmer_filled_length, kmer_size);
 
     current_character_encoding = getCharacterEncoding(buffer[buffer_i]);
-    // current_character_encoding = (uint64_t) ((buffer[buffer_i] & 14)>>1);
+    current_complement_character_encoding = ((uint64_t)3) - current_character_encoding;
+    // current_complement_character_encoding = getComplementCharacter(current_character_encoding);
 
     current_kmer_encoding = ((current_kmer_encoding << 2) & bit_clear_mask) | current_character_encoding;
-    // cout << "character=" << buffer[buffer_i] << " character_encoding=" << current_character_encoding
-    //      << " kmer_encoding=" << current_kmer_encoding << " kmer_filled_length=" << kmer_filled_length << endl;
+    current_rc_kmer_encoding = (current_rc_kmer_encoding >> 2) | (current_complement_character_encoding << left_shift_amount);
+ 
+
     if ((current_character_encoding & invalid_check_mask) == 0)
     {
       if (kmer_filled_length == kmer_size)
       {
-        int current_kmer_partition = getKmerPartition(current_kmer_encoding, kmer_size, partition_count);
-        (*counts[current_kmer_partition])[current_kmer_encoding]++;
+        // current_rc_kmer_encoding = temp_rc_kmer_encoding >> shift_amout;
+        // if (current_rc_kmer_encoding < current_kmer_encoding)
+        // {
+        //   current_kmer_encoding = current_rc_kmer_encoding;
+        // }
+        canonical_kmer_encoding = std::min(current_rc_kmer_encoding, current_kmer_encoding);
+        int current_kmer_partition = getKmerPartition(canonical_kmer_encoding, kmer_size, partition_count);
+        (*counts[current_kmer_partition])[canonical_kmer_encoding]++;
 
         if ((*counts[current_kmer_partition]).size() >= HASHMAP_MAX_SIZE)
         {
@@ -239,6 +278,7 @@ void countKmersFromBufferWithPartitioning(
     else
     {
       current_kmer_encoding = 0;
+      current_rc_kmer_encoding = 0;
       kmer_filled_length = 0;
     }
   }
