@@ -6,33 +6,28 @@
 #include "counter.hpp"
 
 Counter::Counter(uint64_t k,
-                 uint64_t buffer_size,
-                 int read_queue_size,
-                 boost::lockfree::queue<struct writerArguments*> *writer_queue,
+                 int bin_queue_size,
+                 boost::lockfree::queue<struct WriterArguments *> *writer_queue,
                  int partition_count)
 {
-    q.setLimit(read_queue_size);
+    q.setLimit(bin_queue_size);
     this->k = k;
-    this->buffer_size = buffer_size;
     this->writer_queue = writer_queue;
     this->partition_count = partition_count;
-    this->counts = (custom_dense_hash_map**)malloc(partition_count*sizeof(custom_dense_hash_map**));
-    
-    for(int i=0; i<partition_count; i++){
-        this->counts[i] = new custom_dense_hash_map;
-        this->counts[i]->set_empty_key(-1);
-    }
+    this->current_hashmap = new custom_dense_hash_map;
+    this->current_hashmap->set_empty_key(-1);
+    this->current_partition = 0;
 
     start();
 }
 
 Counter::~Counter()
 {
-    if(!finished)
+    if (!finished)
         stop();
 }
 
-void Counter::enqueue(struct CounterArguments *args)
+void Counter::enqueue(struct KmerBin *args)
 {
     q.enqueue(args);
 }
@@ -48,23 +43,36 @@ void Counter::start()
     runner = std::thread(
         [=]
         {
-            struct CounterArguments *args;
+            struct KmerBin *bin;
             while (true)
             {
-                args = q.dequeue();
+                bin = q.dequeue();
 
-                if (args != NULL)
+                if (bin != NULL)
                 {
-                    countKmersFromBufferWithPartitioning(
-                        k,
-                        args->buffer,
-                        buffer_size,
-                        args->allowed_length,
-                        args->first_line_type,
-                        args->reset_status, counts, partition_count, writer_queue);
+                    if (bin->id != this->current_partition)
+                    {
+                        assert(bin->id == (this->current_partition + 1));
 
-                    free(args->buffer);
-                    free(args);
+                        // prev partition is finished. dump it to the writer queue
+                        struct WriterArguments *writer_argument = new WriterArguments;
+                        writer_argument->partition = this->current_partition;
+                        writer_argument->counts = this->current_hashmap;
+
+                        writer_queue->push(writer_argument);
+
+                        this->current_hashmap = new custom_dense_hash_map;
+                        this->current_hashmap->set_empty_key(-1);
+                        this->current_partition = bin->id;
+                    }
+
+                    for (size_t kmer_i = 0; kmer_i < bin->filled_size; kmer_i++)
+                    {
+                        (*this->current_hashmap)[bin->bin[kmer_i]]++;
+                    }
+
+                    free(bin->bin);
+                    free(bin);
                 }
 
                 if (finished && q.isEmpty())
@@ -81,13 +89,12 @@ void Counter::stop() noexcept
     {
         runner.join();
     }
-    
-    for(int i=0; i<partition_count; i++){
-        struct writerArguments * this_writer_argument;
-        this_writer_argument = new writerArguments;
-        this_writer_argument->partition = i;
-        this_writer_argument->counts = counts[i];
-    
-        writer_queue->push(this_writer_argument);
-    }
+
+    //dump last hashmap
+
+    struct WriterArguments *writer_argument = new WriterArguments;
+    writer_argument->partition = this->current_partition;
+    writer_argument->counts = this->current_hashmap;
+
+    writer_queue->push(writer_argument);
 }

@@ -64,6 +64,9 @@ bool ThreadSafeQueue<T>::isEmpty()
 // example: template class ThreadSafeQueue<YourClassHere>;
 
 template class ThreadSafeQueue<struct CounterArguments>;
+template class ThreadSafeQueue<struct EncoderArguments>;
+template class ThreadSafeQueue<struct GeneratorArguments>;
+template class ThreadSafeQueue<struct KmerBin>;
 // template class ThreadSafeQueue<struct FileChunkData>;
 template class ThreadSafeQueue<char>;
 

@@ -11,11 +11,10 @@
 class Writer
 {
 public:
-    explicit Writer(std::string file_path,
-                     boost::lockfree::queue<struct writerArguments*> *writer_queue,
-                     int partition_count,
-                     int rank,
-                     std::string base_path);
+    explicit Writer(std::string output_base_path,
+               boost::lockfree::queue<struct WriterArguments *> *writer_queue,
+               int partition_count,
+               int rank);
 
     ~Writer();
 
@@ -24,12 +23,11 @@ public:
 private:
     std::thread runner;
     bool finished = false;
-    std::string file_path;
-    boost::lockfree::queue<struct writerArguments*> *writer_queue;
+    std::string output_base_path;
+    boost::lockfree::queue<struct WriterArguments*> *writer_queue;
     int partition_count;
-    int *file_counts;
     int rank;
-    std::string base_path;
+    size_t total_distinct_count;
 
     void start();
 

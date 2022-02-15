@@ -1,6 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <vector>
 #include <sparsehash/dense_hash_map>
 #include <sparsehash/sparse_hash_map>
 #include "MurmurHash2.hpp"
@@ -21,14 +22,16 @@ typedef uint64_t hashmap_value_type;
 // typedef google::sparse_hash_map<hashmap_key_type, hashmap_value_type, CustomHasher<const hashmap_key_type>> custom_dense_hash_map;
 typedef google::dense_hash_map<hashmap_key_type, hashmap_value_type, CustomHasher<const hashmap_key_type>> custom_dense_hash_map;
 
-struct writerArguments{
-    int partition;
-    custom_dense_hash_map *counts;
+struct WriterArguments
+{
+  int partition;
+  custom_dense_hash_map *counts;
 };
 
-struct FileChunkData{
+struct FileChunkData
+{
   int32_t first_line_type;
-  char chunk_buffer[]; 
+  char chunk_buffer[];
 };
 
 enum LineType
@@ -41,10 +44,38 @@ enum LineType
 
 struct CounterArguments
 {
-    char *buffer;
-    uint64_t allowed_length;
-    enum LineType first_line_type;
-    bool reset_status;
+  char *buffer;
+  uint64_t allowed_length;
+  enum LineType first_line_type;
+  bool reset_status;
 };
+
+struct EncoderArguments
+{
+  char *buffer;
+  uint64_t buffer_size;
+};
+
+struct EncoderWriterArgs
+{
+  size_t encoded_size;
+  uint32_t *encoded_chunk;
+};
+
+struct GeneratorArguments
+{
+  uint32_t *encoded_read;
+  uint32_t bases_per_block;
+  uint32_t read_length;
+  uint32_t block_count;
+};
+
+struct KmerBin
+{
+  int id;
+  uint64_t* bin;
+  size_t filled_size;
+};
+
 
 #endif

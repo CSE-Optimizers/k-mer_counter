@@ -4,34 +4,33 @@
 #include <boost/lockfree/queue.hpp>
 #include "utils.hpp"
 
-#ifndef THREADER_H
-#define THREADER_H
+#ifndef COUNTER_H
+#define COUNTER_H
 
 class Counter
 {
 public:
     explicit Counter(uint64_t k,
-                     uint64_t buffer_size,
-                     int read_queue_size,
-                     boost::lockfree::queue<struct writerArguments*> *writer_queue,
+                     int bin_queue_size,
+                     boost::lockfree::queue<struct WriterArguments *> *writer_queue,
                      int partition_count);
 
     ~Counter();
 
-    void enqueue(struct CounterArguments *args);
+    void enqueue(struct KmerBin *args);
 
     void explicitStop();
 
 private:
     std::thread runner;
-    ThreadSafeQueue <struct CounterArguments> q;
+    ThreadSafeQueue<struct KmerBin> q;
     bool finished = false;
     uint64_t k;
-    uint64_t buffer_size;
-    custom_dense_hash_map **counts;
-    boost::lockfree::queue<struct writerArguments*> *writer_queue;
+    custom_dense_hash_map *current_hashmap;
+    boost::lockfree::queue<struct WriterArguments *> *writer_queue;
     int partition_count;
-    
+    int current_partition;
+
     void start();
 
     void stop() noexcept;

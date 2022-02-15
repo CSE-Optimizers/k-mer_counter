@@ -4,26 +4,38 @@
 #include "utils.hpp"
 #include <boost/lockfree/queue.hpp>
 
-enum LineType getLineType(FILE *fp);
+// enum LineType getLineType(FILE *fp);
 
-void countKmersFromBuffer(
-    const uint64_t kmer_size,
-    char *buffer,
-    const uint64_t buffer_size,
-    const uint64_t allowed_length,
-    const enum LineType first_line_type,
-    const bool is_starting_from_line_middle,
-    custom_dense_hash_map *counts);
+// void countKmersFromBuffer(
+//     const uint64_t kmer_size,
+//     char *buffer,
+//     const uint64_t buffer_size,
+//     const uint64_t allowed_length,
+//     const enum LineType first_line_type,
+//     const bool is_starting_from_line_middle,
+//     custom_dense_hash_map *counts);
 
-void countKmersFromBufferWithPartitioning(
+// void countKmersFromBufferWithPartitioning(
+//     const uint64_t kmer_size,
+//     char *buffer,
+//     const uint64_t buffer_size,
+//     const uint64_t allowed_length,
+//     const enum LineType first_line_type,
+//     const bool reset_status,
+//     custom_dense_hash_map **counts,
+//     int partition_count,
+//     boost::lockfree::queue<struct WriterArguments *> *writer_queue);
+
+void generateKmersWithPartitioning(
     const uint64_t kmer_size,
-    char *buffer,
-    const uint64_t buffer_size,
-    const uint64_t allowed_length,
-    const enum LineType first_line_type,
-    const bool reset_status,
-    custom_dense_hash_map **counts,
+    uint32_t *encoded_read,
+    uint32_t bases_per_block,
+    uint32_t read_length,
+    uint32_t block_count,
     int partition_count,
-    boost::lockfree::queue<struct writerArguments *> *writer_queue);
+    struct KmerBin** bins,
+    size_t bin_size,
+    boost::lockfree::queue<struct KmerBin *> *writer_queue);
+
 
 #endif

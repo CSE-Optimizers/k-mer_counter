@@ -5,28 +5,23 @@
 #include "writer.hpp"
 #include "kmer_dump.hpp"
 
-Writer::Writer(std::string file_path,
-                     boost::lockfree::queue<struct writerArguments*> *writer_queue,
-                     int partition_count,
-                     int rank,
-                     std::string base_path)
+Writer::Writer(std::string output_base_path,
+               boost::lockfree::queue<struct WriterArguments *> *writer_queue,
+               int partition_count,
+               int rank)
 {
-    this->file_path = file_path;
+    this->output_base_path = output_base_path;
     this->writer_queue = writer_queue;
     this->partition_count = partition_count;
     this->rank = rank;
-    this->base_path = base_path;
+    this->total_distinct_count = 0;
 
-    this->file_counts = (int*)malloc(partition_count*sizeof(int));
-    for(int i=0; i<partition_count; i++){
-        file_counts[i]  = 0;
-    }
     start();
 }
 
 Writer::~Writer()
 {
-    if(!finished)
+    if (!finished)
         stop();
 }
 
@@ -41,23 +36,19 @@ void Writer::start()
     runner = std::thread(
         [=]
         {
-            struct writerArguments *args;
+            struct WriterArguments *args;
             while (true)
             {
                 bool pop_success = writer_queue->pop(args);
 
-                if(pop_success){
-                    // std::cout<<"Successful pop"<<std::endl;
-                    // string save_directory_base_path = "data/"+ std::to_string(args->partition);
-                    // saveHashMap(args->counts, file_counts[args->partition], "/home/damika/Documents/test_results/data/"+ std::to_string(args->partition));
-                    saveHashMap(args->counts, file_counts[args->partition], base_path + std::to_string(args->partition));
-                   
-                    file_counts[args->partition]++;
-                    args->counts->clear();      // this this should be here to clear the hashmap
-                    // free(args->counts);
-                    free(args);
+                if (pop_success)
+                {
+                    this->total_distinct_count += args->counts->size();
+                    saveHashMap(args->counts, 0, this->output_base_path + std::to_string(args->partition));
 
-                    // std::cout<<args->partition<<std::endl;
+                    args->counts->clear(); // this this should be here to clear the hashmap
+                    delete args->counts;
+                    free(args);
                 }
 
                 if (finished && writer_queue->empty())
@@ -74,17 +65,7 @@ void Writer::stop() noexcept
     {
         runner.join();
     }
-    
-    string st="";
-    for(int i=0;i<partition_count;i++){
-        st+=" "+std::to_string(file_counts[i]);
-        string stats_file_path = base_path + std::to_string(i) +"/stats";
-        FILE *stats_file_fp = fopen(stats_file_path.c_str(), "w");
-        fwrite(&file_counts[i], sizeof(int), 1, stats_file_fp);
-        fclose(stats_file_fp);
-    }
-    
-    std::cout<<"Paritition summary-> "<<rank<<"\n"<<st<<std::endl;
 
-    // std::cout<<"stoping writer"<<rank<<std::endl;
+    std::cout << "(" << rank << ") Dump Size =  " << total_distinct_count * (sizeof(hashmap_key_type) + sizeof(hashmap_value_type)) / (1024 * 1024 * 1024) << " GB" << std::endl;
+
 }
