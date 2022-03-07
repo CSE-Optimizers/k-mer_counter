@@ -32,10 +32,22 @@ kmer_distributor: distributor_main.o encoder.o encoder_writer.o utils.hpp thread
 kmer_counter: counter_main.o counter.o extractor.o generator.o kmer_dump.o kmer_writer.o thread_safe_queue.o writer.o MurmurHash2.o utils.hpp 
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o kmer_counter.out counter_main.o counter.o extractor.o generator.o kmer_dump.o kmer_writer.o thread_safe_queue.o writer.o MurmurHash2.o $(USER_LIBS)
 
+kmer_counter_with_queries: count_with_query_main.o binary_counter.o extractor.o generator_with_query.o thread_safe_queue.o utils.hpp 
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o kmer_counter_with_queries.out count_with_query_main.o binary_counter.o extractor.o generator_with_query.o thread_safe_queue.o utils.hpp
+
+count_with_query_main.o: count_with_query_main.cpp utils.hpp thread_safe_queue.hpp extractor.hpp generator_with_query.hpp 
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c count_with_query_main.cpp 
+
+binary_counter.o: binary_counter.cpp thread_safe_queue.hpp 
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c binary_counter.cpp 
+
+generator_with_query.o: generator_with_query.cpp utils.hpp thread_safe_queue.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c generator_with_query.cpp 
+
 counter_main.o: counter_main.cpp utils.hpp thread_safe_queue.hpp extractor.hpp generator.hpp kmer_writer.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c counter_main.cpp $(USER_LIBS)
 
-extractor.o: extractor.cpp extractor.hpp utils.hpp
+extractor.o: extractor.cpp extractor.hpp utils.hpp thread_safe_queue.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c extractor.cpp $(USER_LIBS)
 
 thread_safe_queue.o: thread_safe_queue.cpp
@@ -55,7 +67,6 @@ writer.o: writer.cpp writer.hpp utils.hpp kmer_dump.hpp
 
 kmer_dump.o: kmer_dump.cpp kmer_dump.hpp utils.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c kmer_dump.cpp $(USER_LIBS)
-
 
 distributor_main.o: distributor_main.cpp utils.hpp thread_safe_queue.hpp file_reader.hpp encoder.hpp encoder_writer.hpp
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c distributor_main.cpp $(USER_LIBS)

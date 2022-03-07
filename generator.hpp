@@ -3,6 +3,7 @@
 #include "thread_safe_queue.hpp"
 #include <boost/lockfree/queue.hpp>
 #include "utils.hpp"
+#include "extractor.hpp"
 
 #ifndef GENERATOR_H
 #define GENERATOR_H
@@ -31,7 +32,7 @@ private:
     ThreadSafeQueue<struct GeneratorArguments> q;
     bool finished = false;
     uint32_t bases_per_block;
-    struct KmerBin** bins;
+    struct KmerBin **bins;
     boost::lockfree::queue<struct KmerBin *> *writer_queue;
 
     void start();
