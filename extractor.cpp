@@ -112,7 +112,6 @@ static inline __attribute__((always_inline)) uint64_t getCharacterEncoding(const
 //   }
 // }
 
-
 static inline __attribute__((always_inline)) int getKmerPartition(const uint64_t kmer, int kmer_size, int partition_count)
 {
   // return kmer % partition_count;
@@ -193,14 +192,14 @@ static inline __attribute__((always_inline)) int getKmerPartition(const uint64_t
 //     int partition_count,
 //     boost::lockfree::queue<struct WriterArguments *> *writer_queue)
 // {
- 
+
 //   // static enum LineType current_line_type;
 //   uint64_t current_kmer_encoding = 0;
- 
+
 //   // reversed complement of the current kmer
 //   uint64_t current_rc_kmer_encoding = 0;
 //   uint64_t canonical_kmer_encoding = 0;
- 
+
 //   uint64_t kmer_filled_length = 0;
 //   // if (reset_status)
 //   // {
@@ -208,7 +207,6 @@ static inline __attribute__((always_inline)) int getKmerPartition(const uint64_t
 //   //   current_kmer_encoding = 0;
 //   //   kmer_filled_length = 0;
 //   // }
-
 
 //   uint64_t current_character_encoding = 0;
 //   uint64_t current_complement_character_encoding = 0;
@@ -245,7 +243,6 @@ static inline __attribute__((always_inline)) int getKmerPartition(const uint64_t
 
 //     current_kmer_encoding = ((current_kmer_encoding << 2) & bit_clear_mask) | current_character_encoding;
 //     current_rc_kmer_encoding = (current_rc_kmer_encoding >> 2) | (current_complement_character_encoding << left_shift_amount);
- 
 
 //     if ((current_character_encoding & invalid_check_mask) == 0)
 //     {
@@ -262,15 +259,15 @@ static inline __attribute__((always_inline)) int getKmerPartition(const uint64_t
 
 //         if ((*counts[current_kmer_partition]).size() >= HASHMAP_MAX_SIZE)
 //         {
-          // struct WriterArguments *this_writer_argument;
-          // this_writer_argument = new WriterArguments;
-          // this_writer_argument->partition = current_kmer_partition;
-          // this_writer_argument->counts = counts[current_kmer_partition];
+// struct WriterArguments *this_writer_argument;
+// this_writer_argument = new WriterArguments;
+// this_writer_argument->partition = current_kmer_partition;
+// this_writer_argument->counts = counts[current_kmer_partition];
 
-          // writer_queue->push(this_writer_argument);
+// writer_queue->push(this_writer_argument);
 
-          // custom_dense_hash_map *tmp = new custom_dense_hash_map;
-          // tmp->set_empty_key(-1);
+// custom_dense_hash_map *tmp = new custom_dense_hash_map;
+// tmp->set_empty_key(-1);
 //           counts[current_kmer_partition] = tmp;
 //         }
 //       }
@@ -284,11 +281,6 @@ static inline __attribute__((always_inline)) int getKmerPartition(const uint64_t
 //   }
 // }
 
-
-
-
-
-
 void generateKmersWithPartitioning(
     const uint64_t kmer_size,
     uint32_t *encoded_read,
@@ -296,19 +288,18 @@ void generateKmersWithPartitioning(
     uint32_t read_length,
     uint32_t block_count,
     int partition_count,
-    struct KmerBin** bins,
+    struct KmerBin **bins,
     size_t bin_size,
     boost::lockfree::queue<struct KmerBin *> *writer_queue)
 {
- 
+
   uint64_t current_kmer_encoding = 0;
- 
+
   // reversed complement of the current kmer
   uint64_t current_rc_kmer_encoding = 0;
   uint64_t canonical_kmer_encoding = 0;
- 
-  uint64_t kmer_filled_length = 0;
 
+  uint64_t kmer_filled_length = 0;
 
   uint64_t current_character_encoding = 0;
   uint64_t current_complement_character_encoding = 0;
@@ -318,17 +309,19 @@ void generateKmersWithPartitioning(
   const uint64_t left_shift_amount = (kmer_size - 1) * 2;
 
   int current_block = 0;
-  int current_character_offest = (bases_per_block - 1)*3;
+  int current_character_offest = (bases_per_block - 1) * 3;
 
-  for(uint32_t i = 0; i < read_length; i++){  
-    
+  for (uint32_t i = 0; i < read_length; i++)
+  {
+
     uint32_t current_char_enc = (encoded_read[current_block] & (((uint32_t)7) << current_character_offest)) >> current_character_offest;
 
-    current_character_offest-=3;
-    
-    if(current_character_offest == 0){
+    current_character_offest -= 3;
+
+    if (current_character_offest == 0)
+    {
       current_block++;
-      current_character_offest = (bases_per_block - 1)*3;
+      current_character_offest = (bases_per_block - 1) * 3;
     }
 
     kmer_filled_length++;
@@ -340,7 +333,6 @@ void generateKmersWithPartitioning(
 
     current_kmer_encoding = ((current_kmer_encoding << 2) & bit_clear_mask) | current_character_encoding;
     current_rc_kmer_encoding = (current_rc_kmer_encoding >> 2) | (current_complement_character_encoding << left_shift_amount);
- 
 
     if ((current_character_encoding & invalid_check_mask) == 0)
     {
@@ -354,21 +346,19 @@ void generateKmersWithPartitioning(
         bins[current_kmer_partition]->bin[bins[current_kmer_partition]->filled_size] = canonical_kmer_encoding;
         bins[current_kmer_partition]->filled_size++;
 
-        if (bins[current_kmer_partition]->filled_size >=  bin_size)
+        if (bins[current_kmer_partition]->filled_size >= bin_size)
         {
-          //send bin if the bin is filled
+          // send bin if the bin is filled
 
           writer_queue->push(bins[current_kmer_partition]);
-          bins[current_kmer_partition] = (KmerBin*) malloc(sizeof(struct KmerBin));
+          bins[current_kmer_partition] = (KmerBin *)malloc(sizeof(struct KmerBin));
           assert(bins[current_kmer_partition]);
           bins[current_kmer_partition]->id = current_kmer_partition;
-          bins[current_kmer_partition]->bin = (uint64_t*) malloc(bin_size * sizeof(uint64_t));
+          bins[current_kmer_partition]->bin = (uint64_t *)malloc(bin_size * sizeof(uint64_t));
           assert(bins[current_kmer_partition]->bin);
           memset(bins[current_kmer_partition]->bin, 0, bin_size * sizeof(uint64_t));
           bins[current_kmer_partition]->filled_size = 0;
-        }      
-        
-        
+        }
       }
     }
     else
@@ -377,7 +367,73 @@ void generateKmersWithPartitioning(
       current_rc_kmer_encoding = 0;
       kmer_filled_length = 0;
     }
-
   }
+}
 
+void generateKmersWithQueryKmers(
+    const uint64_t kmer_size,
+    uint32_t *encoded_read,
+    uint32_t bases_per_block,
+    uint32_t read_length,
+    uint32_t block_count,
+    boost::lockfree::queue<uint64_t> *kmer_queue)
+{
+
+  uint64_t current_kmer_encoding = 0;
+
+  // reversed complement of the current kmer
+  uint64_t current_rc_kmer_encoding = 0;
+  uint64_t canonical_kmer_encoding = 0;
+
+  uint64_t kmer_filled_length = 0;
+
+  uint64_t current_character_encoding = 0;
+  uint64_t current_complement_character_encoding = 0;
+
+  const uint64_t bit_clear_mask = ~(((uint64_t)3) << (kmer_size * 2));
+  const uint64_t invalid_check_mask = ((uint64_t)1) << 2;
+  const uint64_t left_shift_amount = (kmer_size - 1) * 2;
+
+  int current_block = 0;
+  int current_character_offest = (bases_per_block - 1) * 3;
+
+  for (uint32_t i = 0; i < read_length; i++)
+  {
+
+    uint32_t current_char_enc = (encoded_read[current_block] & (((uint32_t)7) << current_character_offest)) >> current_character_offest;
+
+    current_character_offest -= 3;
+
+    if (current_character_offest == 0)
+    {
+      current_block++;
+      current_character_offest = (bases_per_block - 1) * 3;
+    }
+
+    kmer_filled_length++;
+
+    kmer_filled_length = std::min(kmer_filled_length, kmer_size);
+
+    current_character_encoding = (uint64_t)current_char_enc;
+    current_complement_character_encoding = ((uint64_t)3) - current_character_encoding;
+
+    current_kmer_encoding = ((current_kmer_encoding << 2) & bit_clear_mask) | current_character_encoding;
+    current_rc_kmer_encoding = (current_rc_kmer_encoding >> 2) | (current_complement_character_encoding << left_shift_amount);
+
+    if ((current_character_encoding & invalid_check_mask) == 0)
+    {
+      if (kmer_filled_length == kmer_size)
+      {
+
+        canonical_kmer_encoding = std::min(current_rc_kmer_encoding, current_kmer_encoding);
+        kmer_queue->push(canonical_kmer_encoding);
+      }
+    }
+    else
+    {
+      current_kmer_encoding = 0;
+      current_rc_kmer_encoding = 0;
+      kmer_filled_length = 0;
+    }
+  }
 }

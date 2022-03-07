@@ -6,9 +6,6 @@
 #include <string>
 #include <condition_variable>
 
-#include "extractor.hpp"
-
-
 template <class T>
 class ThreadSafeQueue
 {

@@ -15,9 +15,12 @@
 #define COM_BUFFER_SIZE 0x40000 // 0x40000 = 256KB
 #define MAX_LINE_LENGTH 103000  // TODO: make this a parameter
 
+// using namespace std;
+
 int main(int argc, char *argv[])
 {
     int num_tasks, rank;
+    std::cout << "Hello" << std::endl;
 
     const char *file_name = argv[1];
     std::string output_base_path = argv[2];
@@ -29,6 +32,8 @@ int main(int argc, char *argv[])
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     MPI_Get_processor_name(processor_name, &namelen);
 
+    output_base_path = output_base_path + std::to_string(rank) + "/";
+    std::cout << "Hello" << std::endl;
     // removing previous encoded file
     std::system(("rm " + output_base_path + "encoded.bin").c_str()); // removing previous encoded file
 
@@ -126,10 +131,9 @@ int main(int argc, char *argv[])
             args->buffer_size = com_buffer_size;
             args->buffer = recv_buffer;
 
-
             encoder.enqueue(args);
         }
-        
+
         encoder.explicitStop();
         writer.explicitStop();
         printf("\n");
