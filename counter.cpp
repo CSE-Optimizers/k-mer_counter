@@ -55,7 +55,7 @@ void Counter::start()
                         assert(bin->id == (this->current_partition + 1));
 
                         // prev partition is finished. dump it to the writer queue
-                        struct WriterArguments *writer_argument = new WriterArguments;
+                        struct WriterArguments *writer_argument = (struct WriterArguments*) malloc(sizeof(struct WriterArguments));
                         writer_argument->partition = this->current_partition;
                         writer_argument->counts = this->current_hashmap;
 

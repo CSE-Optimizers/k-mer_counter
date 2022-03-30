@@ -11,9 +11,10 @@
 #define HASHMAP_MAX_SIZE 0x400000
 // #define KMER_BIN_MAX_SIZE 0x2000000 // for 10 bins, 2.5 GB memory
 #define KMER_BIN_MAX_SIZE 0x8000 // 256KB per one bin
-#define BIN_QUEUE_SIZE 1000
-#define READ_QUEUE_SIZE 10000
+#define BIN_QUEUE_SIZE 100
+#define READ_QUEUE_SIZE 1000
 #define PARTITION_COUNT 100
+// #define PARTITION_FACTOR 26     //26 will give approx 100 partitions for 273GB file for 64 nodes
 #define BASES_PER_BLOCK 10
 
 int main(int argc, char *argv[])
@@ -59,7 +60,7 @@ int main(int argc, char *argv[])
         uint32_t current_read_block_count;
         uint32_t current_read_length;
         uint32_t *encoded_read;
-        const uint32_t bases_per_block = (size_t)10;
+        const uint32_t bases_per_block = (uint32_t)10;
         size_t log_counter = 0;
 
         while (fread(&current_header_block, sizeof(uint32_t), 1, encoded_file))
@@ -68,7 +69,9 @@ int main(int argc, char *argv[])
             current_read_length = current_header_block & ~(3 << 30);
 
             current_read_block_count = ((current_read_length + bases_per_block - 1) / bases_per_block);
-            encoded_read = (uint32_t *)calloc(current_read_block_count, sizeof(uint32_t));
+            encoded_read = (uint32_t *)malloc(current_read_block_count * sizeof(uint32_t));
+            assert(encoded_read);
+            memset(encoded_read, 0, current_read_block_count * sizeof(uint32_t));
 
             fread(encoded_read, sizeof(uint32_t), current_read_block_count, encoded_file);
 
@@ -82,7 +85,7 @@ int main(int argc, char *argv[])
             generator.enqueue(args);
             log_counter++;
 
-            if (log_counter % 0xF000 == 0)
+            if (log_counter % 0xFFFFF == 0)
             {
                 std::cout << "(" << rank << ") File read progress " << 100 * (ftell(encoded_file) / ((double)encoded_file_size)) << "%\n";
             }

@@ -17,7 +17,8 @@ struct CustomHasher
 };
 
 typedef uint64_t hashmap_key_type;
-typedef uint64_t hashmap_value_type;
+// typedef uint64_t hashmap_value_type;
+typedef uint16_t hashmap_value_type;
 
 // typedef google::sparse_hash_map<hashmap_key_type, hashmap_value_type, CustomHasher<const hashmap_key_type>> custom_dense_hash_map;
 typedef google::dense_hash_map<hashmap_key_type, hashmap_value_type, CustomHasher<const hashmap_key_type>> custom_dense_hash_map;

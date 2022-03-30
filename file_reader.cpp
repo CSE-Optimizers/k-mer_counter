@@ -125,7 +125,7 @@ void FileReader::start()
                 line_counter = (line_counter + 1)%4;
                 log_counter++;
 
-                if (log_counter % 0x80000 == 0)
+                if (log_counter % 0x800000 == 0)
                 {
                     std::cout << "File read progress " << 100 * (ftell(file) / ((double)this->total_file_size)) << "%\n";
                 }
