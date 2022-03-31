@@ -17,6 +17,6 @@ using std::string;
 void mergeHashmap(custom_dense_hash_map newHashMap, int partition, string base_path);
 void mergeArrayToHashmap(uint64_t *dataArray, int dataArrayLength, int partition, string base_path);
 void dumpHashmap(custom_dense_hash_map hashMap, int partition, int partitionFileCounts[], string base_path);
-void loadHashMap(custom_dense_hash_map *hashMap, int partition, int file_index, string base_path);
+void loadHashMap(custom_dense_hash_map *hashMap, int partition, string base_path);
 void saveHashMap(custom_dense_hash_map *hashMap, int partition, string base_path);
 #endif

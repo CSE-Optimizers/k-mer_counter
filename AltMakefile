@@ -16,12 +16,11 @@ USER_LIBS = -I /home/damika/cloud-97/programs/sparsehash-sparsehash-2.0.4/src
 # com.o: com.cpp com.hpp utils.hpp
 # 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c com.cpp $(USER_LIBS)
 
-# finalizer: finalizer.o MurmurHash2.o kmer_dump.o utils.hpp
-# 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o finalizer.out finalizer.o kmer_dump.o MurmurHash2.o $(USER_LIBS)
-# 
-# finalizer.o: finalizer.cpp kmer_dump.hpp utils.hpp
-# 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c finalizer.cpp $(USER_LIBS)
-# 
+finalizer: finalizer.o MurmurHash2.o kmer_dump.o utils.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o finalizer.out finalizer.o kmer_dump.o MurmurHash2.o $(USER_LIBS)
+
+finalizer.o: finalizer.cpp kmer_dump.hpp utils.hpp
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c finalizer.cpp $(USER_LIBS)
 
 
 
