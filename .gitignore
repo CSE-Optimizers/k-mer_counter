@@ -35,3 +35,10 @@
 
 # k-mer dump
 *.data
+output.txt
+
+# IDE data
+.vscode
+
+# Folders
+/data

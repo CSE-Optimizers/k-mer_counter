@@ -109,22 +109,23 @@ void dumpHashmap(custom_dense_hash_map hashMap, int partition, int partitionFile
 
 void loadHashMap(custom_dense_hash_map *hashMap, int partition, string base_path)
 {
-  string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";
+  string file_path = base_path + DIRECTORY_SEP + to_string(partition) + DIRECTORY_SEP + "0.data";
   FILE *fp = fopen(file_path.c_str(), "r");
 
   if (fp)
   {
     (*hashMap).unserialize(StringToIntSerializer(), fp);
     fclose(fp);
+    // std::system(("mkdir -p " + base_path).c_str());
   }
 }
 
 /*
   Overwrites any existing file.
-  */
+*/
 void saveHashMap(custom_dense_hash_map *hashMap, int partition, string base_path)
 {
-
+  std::system(("mkdir -p " + base_path).c_str());
   string file_path = base_path + DIRECTORY_SEP + to_string(partition) + ".data";
   FILE *fp = fopen(file_path.c_str(), "w");
 

@@ -1,227 +1,265 @@
-/**
- * Get line count before MPI part
- * Give allocated line section for each MPI process
- * 
-*/
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <algorithm>
-#include <mpi.h>
-#include <stdlib.h>
-#include "extractor.hpp"
-#include "com.hpp"
-#include "kmer_dump.hpp"
-#include <stddef.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/stat.h>
-#include "utils.hpp"
+// /**
+//  * Get line count before MPI part
+//  * Give allocated line section for each MPI process
+//  * 
+// */
+// #include <iostream>
+// #include <fstream>
+// #include <string>
+// #include <algorithm>
+// #include <mpi.h>
+// #include <stdlib.h>
+// #include "extractor.hpp"
+// #include "com.hpp"
+// #include "kmer_dump.hpp"
+// #include <stddef.h>
+// #include <unistd.h>
+// #include <time.h>
+// #include <sys/stat.h>
+// #include <sys/time.h>
+// #include <boost/lockfree/queue.hpp>
 
-#define READ_BUFFER_SIZE 0x200
-#define HASH_MAP_MAX_SIZE 0x1000000
-#define DUMP_SIZE 10
+// #include "utils.hpp"
+// #include "counter.hpp"
+// #include "thread_safe_queue.hpp"
+// #include "writer.hpp"
+// #include "file_reader.hpp"
 
-static inline __attribute__((always_inline)) void getKmerFromIndex(const int kmer_size, const uint64_t index, char *out_buffer)
-{
-  uint64_t character_mask = ((uint64_t)3) << ((kmer_size - 1) * 2);
-  uint64_t character_encoding = 0;
-  for (int i = 0; i < kmer_size; i++)
-  {
-    character_encoding = (index & character_mask) >> ((kmer_size - i - 1) * 2);
-    switch (character_encoding)
-    {
-    case 0:
-      out_buffer[i] = 'A';
-      break;
+// // #define READ_BUFFER_SIZE 0x1000
+// #define HASH_MAP_MAX_SIZE 0x1000000
+// #define DUMP_SIZE 10
+// #define READ_QUEUE_SIZE 10
+// #define MASTER_FILE_QUEUE_SIZE 400
+// #define PARTITION_COUNT 10
+// // #define SEGMENT_COUNT 0x400
+// #define COM_BUFFER_SIZE 0x40000    //0x40000 = 256KB
+// #define MAX_LINE_LENGTH 103000
 
-    case 1:
-      out_buffer[i] = 'C';
-      break;
+// static inline __attribute__((always_inline)) void getKmerFromIndex(const int kmer_size, const uint64_t index, char *out_buffer)
+// {
+//   uint64_t character_mask = ((uint64_t)3) << ((kmer_size - 1) * 2);
+//   uint64_t character_encoding = 0;
+//   for (int i = 0; i < kmer_size; i++)
+//   {
+//     character_encoding = (index & character_mask) >> ((kmer_size - i - 1) * 2);
+//     switch (character_encoding)
+//     {
+//     case 0:
+//       out_buffer[i] = 'A';
+//       break;
 
-    case 2:
-      out_buffer[i] = 'G';
-      break;
+//     case 1:
+//       out_buffer[i] = 'C';
+//       break;
 
-    case 3:
-      out_buffer[i] = 'T';
-      break;
+//     case 2:
+//       out_buffer[i] = 'T';
+//       break;
 
-    default:
-      break;
-    }
+//     case 3:
+//       out_buffer[i] = 'G';
+//       break;
 
-    character_mask = character_mask >> 2;
-  }
+//     default:
+//       break;
+//     }
 
-  return;
-}
+//     character_mask = character_mask >> 2;
+//   }
 
-int main(int argc, char *argv[])
-{
+//   return;
+// }
 
-  int kmer_size;
-  char read_buffer[READ_BUFFER_SIZE + 1] = {0};
-  custom_dense_hash_map counts;
 
-  int num_tasks, rank;
-  uint64_t my_offset_data[2];
+// float time_diffs3(struct timeval *y, struct timeval *x)
+// {
+//     struct timeval result;
 
-  const char *file_name = argv[1];
-  kmer_size = atoi(argv[2]);
-  // counts.set_empty_key(-1);
+//     if (x->tv_usec > 999999)
+//     {
+//         x->tv_sec += x->tv_usec / 1000000;
+//         x->tv_usec %= 1000000;
+//     }
 
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  uint64_t offset_data[num_tasks][2]; //offset and allocated size for this process (in bytes)
+//     if (y->tv_usec > 999999)
+//     {
+//         y->tv_sec += y->tv_usec / 1000000;
+//         y->tv_usec %= 1000000;
+//     }
 
-  std::cout << "total processes = " << num_tasks << std::endl;
-  std::cout << "rank = " << rank << std::endl;
+//     result.tv_sec = x->tv_sec - y->tv_sec;
 
-  if (rank == 0)
-  {
-    // {
-    //   int i = 0;
-    //   while (0 == i)
-    //     sleep(5);
-    // }
+//     if ((result.tv_usec = x->tv_usec - y->tv_usec) < 0)
+//     {
+//         result.tv_usec += 1000000;
+//         result.tv_sec--; // borrow
+//     }
 
-    // Calculating total file size
-    struct stat data_file_stats;
-    if (stat(file_name, &data_file_stats) != 0)
-    {
-      std::cerr << "Error when calculating file size." << std::endl;
-      exit(EXIT_FAILURE);
-    }
+//     return result.tv_sec*1.0 + (1e-6)*result.tv_usec;
+// }
 
-    const size_t total_size = data_file_stats.st_size;
-    std::cout << "Total file size in bytes = " << total_size << std::endl;
-    const uint64_t chunk_size = total_size / (num_tasks);
 
-    for (int process_i = 0; process_i < num_tasks; process_i++)
-    {
-      offset_data[process_i][0] = (process_i)*chunk_size;
-      offset_data[process_i][1] = chunk_size;
-    }
 
-    offset_data[num_tasks - 1][1] = (total_size - ((num_tasks - 1) * chunk_size)); // last ranked procedd will do all remaining work
-  }
-  MPI_Scatter(offset_data, 2, MPI_UINT64_T, my_offset_data, 2,
-              MPI_UINT64_T, 0, MPI_COMM_WORLD);
+// int main(int argc, char *argv[])
+// {
 
-  /* wait until attaching debugger*/
-  // if (rank == 1)
-  // {
-  //   int i = 0;
-  //   while (0 == i)
-  //     sleep(5);
-  // }
+//   struct timeval start_time, end_time;
 
-  // Counting step starts from here
+//   float total_time_to_communicate = 0;
 
-  const uint64_t my_offset = my_offset_data[0];
-  uint64_t my_revised_offset = my_offset;
-  const uint64_t my_allocated_size = my_offset_data[1];
-  // int tag = 0;
-  // clock_t t;
 
-  std::cout << "my (" << rank << ")\t offset = " << my_offset << "\t chunk_size = " << my_allocated_size << std::endl;
+//   int kmer_size;
 
-  memset(read_buffer, 0, READ_BUFFER_SIZE * (sizeof read_buffer[0]));
+//   int num_tasks, rank;
 
-  FILE *file = fopen(file_name, "r");
+//   const char *file_name = argv[1];
+//   kmer_size = atoi(argv[2]);
+//   std::string output_file_path = argv[3];
 
-  if (my_offset > 0)
-  {
-    fseek(file, my_offset - 1, SEEK_SET);
-    char temp_char = fgetc(file);
-    if (temp_char != '\n')
-    {
-      // now were are in the middle of a line
-      // just do fgets and ignore the current line.
-      // that line will be processed by the previous rank process.
-      fgets(read_buffer, READ_BUFFER_SIZE, file);
-      cout << "ignored first line = \"" << read_buffer << "\"" << endl;
-      my_revised_offset = ftell(file);
-    }
-  }
+//   MPI_Init(&argc, &argv);
+//   MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
+//   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+//   MPI_Status s;
 
-  enum LineType first_line_type = getLineType(file);
+//   int namelen;
+//   char processor_name[MPI_MAX_PROCESSOR_NAME];
+//   MPI_Get_processor_name(processor_name, &namelen);
 
-  //return to revised starting point
-  fseek(file, my_revised_offset, SEEK_SET);
+//   boost::lockfree::queue<struct WriterArguments *> writer_queue(10);
 
-  memset(read_buffer, 0, READ_BUFFER_SIZE + 1);
+//   // if (rank == 0)
+//   //   std::cout << "total processes = " << num_tasks << std::endl;
+//   // std::cout << "rank = " << rank << " Node: " << processor_name << std::endl;
 
-  // adjust range size due to ignoring the first line
-  const size_t remaining = my_allocated_size - (my_revised_offset - my_offset);
-  size_t processed = 0;
-  size_t current_chunk_size = 0;
-  uint64_t log_counter = 0;
+//   std::system(("rm -rf "+output_file_path +"*/*.data").c_str());
 
-  while (processed <= remaining && !feof(file))
-  {
-    log_counter++;
-    if (log_counter % 100000 == 0)
-    {
-      std::cout << rank << " " << 100 * (ftell(file) - my_offset) / ((double)my_allocated_size) << "%\n";
-    }
+//   size_t total_file_size;
+//   size_t com_buffer_size = COM_BUFFER_SIZE;
 
-    current_chunk_size = fread(read_buffer, sizeof(char), READ_BUFFER_SIZE, file);
+//   if (rank == 0)
+//   {
+//     // Calculating total file size
+//     struct stat data_file_stats;
+//     if (stat(file_name, &data_file_stats) != 0)
+//     {
+//       std::cerr << "Error when calculating file size." << std::endl;
+//       exit(EXIT_FAILURE);
+//     }
 
-    countKmersFromBuffer(
-        kmer_size,
-        read_buffer,
-        READ_BUFFER_SIZE,
-        (processed + current_chunk_size) <= remaining ? current_chunk_size : remaining - processed,
-        first_line_type, true, &counts);
-    processed += current_chunk_size;
-    memset(read_buffer, 0, READ_BUFFER_SIZE + 1);
-  }
+//     total_file_size = data_file_stats.st_size;
+//     std::cout << "Total file size in bytes = " << total_file_size << std::endl;
 
-  // return to one character before the end of allocated range
-  fseek(file, my_offset + my_allocated_size - 1, SEEK_SET);
-  char temp_char = 0;
-  temp_char = fgetc(file);
-  if (temp_char != '\n')
-  {
-    // we are in the middle of a line
-    // process the remaining part of the line
+//     // std::cout << "Com buffer size =  " << com_buffer_size/1024 << " KB" << std::endl;
 
-    // cout << "\nrading the remaining part of the last line \n";
-    fgets(read_buffer, READ_BUFFER_SIZE, file);
-    countKmersFromBuffer(
-        kmer_size,
-        read_buffer,
-        READ_BUFFER_SIZE,
-        strlen(read_buffer),
-        first_line_type, true, &counts);
-    memset(read_buffer, 0, READ_BUFFER_SIZE + 1);
-  }
+//   }
 
-  cout << "\n\n===============\nfinal position = " << ftell(file) << std::endl;
+//   // send the calculated segment size
+//   MPI_Bcast(&com_buffer_size, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+//   std::cout << "(" << rank << ") com buffer size = " << com_buffer_size << std::endl;
 
-  fclose(file);
-  printf("\n");
+//   if (rank == 0){
+//     ThreadSafeQueue <char> master_file_queue;
+//     master_file_queue.setLimit(MASTER_FILE_QUEUE_SIZE);
 
-  // custom_dense_hash_map::iterator it = counts.begin();
 
-  // char *kmer = (char *)calloc(kmer_size + 1, sizeof(char));
-  // for (; it != counts.end(); ++it)
-  // {
-  //   getKmerFromIndex(kmer_size, it->first, kmer);
-  //   std::cout << kmer << " " << it->second << std::endl;
-  // }
+//     FileReader fileReader(file_name, COM_BUFFER_SIZE, MAX_LINE_LENGTH, &master_file_queue, total_file_size);
 
-  saveHashMap(&counts, rank, "data");
-  counts.clear();
 
-  std::cout << rank << " hashmap size = " << counts.size();
-  std::cout << "\tbucket count = " << counts.bucket_count() << std::endl;
+//     int node_rank;
 
-  std::cout << "finalizing.." << rank << std::endl;
-  MPI_Finalize();
-  std::cout << "done.." << rank << std::endl;
-  return 0;
-}
+//     char* send_buffer;
+
+//     uint64_t log_counter = 0;
+//     while (true){
+
+//       send_buffer = master_file_queue.dequeue();
+//       if(send_buffer != NULL){
+//         gettimeofday(&start_time,NULL);
+//         MPI_Recv(&node_rank, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+//         MPI_Send(send_buffer, COM_BUFFER_SIZE, MPI_BYTE, node_rank, 1, MPI_COMM_WORLD);
+//         gettimeofday(&end_time,NULL);
+//         total_time_to_communicate += time_diffs3(&start_time, &end_time);
+        
+//         free(send_buffer);
+//         log_counter++;
+//         // cout <<"overall progress : " << 100 * log_counter / ((double)(SEGMENT_COUNT)) << "%\n";
+
+//       }
+
+
+//       if (fileReader.isCompleted() && master_file_queue.isEmpty())
+//       {
+//           break;
+//       }
+      
+//     }
+//     fileReader.finish();
+
+//     // send empty buffer as the last message
+//     send_buffer = (char* )malloc(COM_BUFFER_SIZE);
+//     memset(send_buffer, 0, COM_BUFFER_SIZE);
+
+  
+//     for (int j =1; j < num_tasks; j++) {
+//       MPI_Recv(&node_rank, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+//       MPI_Send(send_buffer, COM_BUFFER_SIZE, MPI_BYTE, node_rank, 1, MPI_COMM_WORLD);
+
+//       cout << "Finish Sending Allocations to "  << node_rank << endl; 
+//     }
+//     free(send_buffer);
+
+
+//     cout << "total time to communicate = " <<  total_time_to_communicate<< endl;
+
+//   }
+
+  
+//   if (rank > 0)
+//   {
+//     std::cout << "(" << rank << ") com buffer size = " << com_buffer_size/1024 << " KB" << std::endl;
+//     Counter counter(kmer_size, com_buffer_size, READ_QUEUE_SIZE, &writer_queue, PARTITION_COUNT);
+//     Writer writer("data", &writer_queue, PARTITION_COUNT, rank, output_file_path);
+
+
+//     char* recv_buffer;
+    
+
+
+//     while(true) {
+//       recv_buffer = (char* )malloc(com_buffer_size);
+//       assert(recv_buffer);
+//       MPI_Send(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+//       MPI_Recv(recv_buffer, com_buffer_size, MPI_BYTE, 0, 1, MPI_COMM_WORLD, &s);
+
+//       if (recv_buffer[0] == 0) {
+//         // last empty message received
+//         break;
+//       }
+
+        
+//       // char *data_buffer = (char *)malloc(total_max_buffer_size * sizeof(char));
+//       // memcpy(data_buffer, file_chunk_data->chunk_buffer, total_max_buffer_size); //copy to a new buffer
+
+
+//       struct CounterArguments *args = (struct CounterArguments *)malloc(sizeof(struct CounterArguments));
+//       args->allowed_length = com_buffer_size;
+//       args->buffer = recv_buffer;
+//       // args->first_line_type = NULL;
+//       args->reset_status = true;
+
+//       counter.enqueue(args);
+//       // free(file_chunk_data);
+
+      
+//     } 
+//     free(recv_buffer);
+//     counter.explicitStop();
+//     writer.explicitStop();
+//     printf("\n");
+    
+//     }
+//   std::cout << "finalizing.." << rank << std::endl;
+//   MPI_Finalize();
+//   std::cout << "done.." << rank << std::endl;
+//   return 0;
+// }
